@@ -2,20 +2,34 @@ import { useState } from 'react';
 import { Search, Loader2, ShieldCheck, Radar, AlertCircle } from 'lucide-react';
 import Typewriter from 'typewriter-effect';
 
+// interface DomainInputProps {
+//   onScan: (domain: string) => Promise<void>;
+//   isLoading: boolean;
+// }
 interface DomainInputProps {
-  onScan: (domain: string) => Promise<void>;
+  onScan: (domain: string, tool: string) => Promise<void>;
+  selectedTool: string;
+  setSelectedTool: (tool: string) => void;
   isLoading: boolean;
 }
 
-export function DomainInput({ onScan, isLoading }: DomainInputProps) {
-  const [domain, setDomain] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (domain.trim()) {
-      await onScan(domain.trim());
-    }
-  };
+export function DomainInput({ onScan, isLoading, selectedTool, setSelectedTool }: DomainInputProps) {
+  const [domain, setDomain] = useState('');
+  // const [selectedTool, setSelectedTool] = useState('knockpy');
+
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (domain.trim()) {
+  //     await onScan(domain.trim());
+  //   }
+  // };
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (domain.trim()) {
+    await onScan(domain.trim(), selectedTool);
+  }
+};
 
   return (
     <div className="relative">
@@ -37,7 +51,7 @@ export function DomainInput({ onScan, isLoading }: DomainInputProps) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+        {/* <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
           <div className="relative group">
             <input
               type="text"
@@ -66,7 +80,87 @@ export function DomainInput({ onScan, isLoading }: DomainInputProps) {
               </>
             )}
           </button>
-        </form>
+        </form> */}
+        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+  {/* DOMAIN INPUT + TOOL SELECT INLINE */}
+  <div className="flex flex-col sm:flex-row gap-4">
+    <div className="relative group flex-1">
+      <input
+        type="text"
+        value={domain}
+        onChange={(e) => setDomain(e.target.value)}
+        placeholder="Enter domain (e.g., example.com)"
+        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300 group-hover:border-purple-500/50"
+      />
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-xl" />
+    </div>
+
+<div className="relative group w-full sm:w-40">
+  <select
+    value={selectedTool}
+    onChange={(e) => setSelectedTool(e.target.value)}
+    className="
+      w-full px-4 py-3
+      rounded-xl
+      bg-zinc-900/50
+      border border-purple-700
+      text-white font-medium
+      backdrop-blur-sm
+      focus:outline-none focus:ring-2 focus:ring-purple-600/70
+      transition-all duration-300
+      appearance-none
+      shadow-lg shadow-black/30
+    "
+  >
+    <option value="knockpy" className="text-white bg-zinc-900">Knockpy</option>
+    <option value="subfinder" className="text-white bg-zinc-900">Subfinder</option>
+  </select>
+
+  {/* Hover + focus gradient effect */}
+  <div
+    className="
+      absolute inset-0 rounded-xl
+      bg-gradient-to-r from-purple-700/40 to-blue-700/40
+      opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+      transition-opacity duration-300
+      -z-10 blur-xl
+    "
+  />
+
+  {/* Arrow icon with open animation */}
+  <div
+    className="
+      pointer-events-none absolute inset-y-0 right-0 flex items-center px-4
+      text-zinc-400 transition-transform duration-300"
+      
+  >
+    ▼
+  </div>
+</div>
+
+
+  </div>
+
+  {/* SUBMIT BUTTON */}
+  <button
+    type="submit"
+    disabled={isLoading || !domain.trim()}
+    className="mt-4 w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+  >
+    {isLoading ? (
+      <>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Scanning...
+      </>
+    ) : (
+      <>
+        <Search className="w-5 h-5" />
+        Scan Now
+      </>
+    )}
+  </button>
+</form>
+
 
        {/* Feature Cards */}
 <div className="mt-12 grid gap-6 md:grid-cols-3">

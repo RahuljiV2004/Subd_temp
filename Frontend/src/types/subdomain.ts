@@ -112,3 +112,85 @@
 //   // ✅ New: Open Ports (from Nmap or similar)
   
 // }
+
+export interface Subdomain {
+  name: string;
+  domain: string;
+  ip: string[];
+  status: string;
+  lastSeen: string;
+  firstSeen: string;
+  technologies: string[];
+  vulnerabilities: Vulnerability[];
+  http: [number, string, null];
+  https: [number, string, null];
+  cert: [boolean];
+}
+export interface SubdomainKnockpy {
+  name: string;
+  domain: string;
+  ip: string[];
+  status: string;
+  lastSeen: string;
+  firstSeen: string;
+  technologies: string[];
+  vulnerabilities: Vulnerability[];
+  http: [number, string, null];
+  https: [number, string, null];
+  cert: [boolean];
+}
+
+export interface SubdomainSubfinder {
+  subdomain: string;
+  httpx_status_code: number;
+  httpx_a: string[];
+  httpx_tls_probe_status: boolean;
+  
+}
+
+export interface Vulnerability {
+  name: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  cve?: string;
+}
+
+export interface TrendData {
+  date: string;
+  subdomains: number;
+  vulnerabilities: number;
+}
+
+export const mockSubdomains: Subdomain[] = [
+  {
+    name: 'example.com',
+    domain: 'example.com',
+    ip: ['93.184.216.34'],
+    status: 'active',
+    lastSeen: '2024-03-20',
+    firstSeen: '2024-01-01',
+    technologies: ['Nginx', 'PHP'],
+    vulnerabilities: [],
+    http: [200, 'OK', null],
+    https: [200, 'OK', null],
+    cert: [true]
+  }
+];
+
+export const mockTrendData: TrendData[] = [
+  {
+    date: '2024-01',
+    subdomains: 10,
+    vulnerabilities: 2
+  },
+  {
+    date: '2024-02',
+    subdomains: 15,
+    vulnerabilities: 3
+  },
+  {
+    date: '2024-03',
+    subdomains: 20,
+    vulnerabilities: 4
+  }
+];

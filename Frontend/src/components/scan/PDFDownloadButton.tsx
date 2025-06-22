@@ -436,9 +436,9 @@ pdf.text(
 
       // Executive Summary
       addSectionHeader('Executive Summary');
-      const securityStatus = subdomain.cert[0] ? 'SECURE' : 'ATTENTION REQUIRED';
-      const statusColor = subdomain.cert[0] ? 'Secure Certificate Found' : 'Security Issues Detected';
-      addField('Security Status', securityStatus, false, !subdomain.cert[0]);
+      const securityStatus = subdomain.cert?.[0] ? 'SECURE' : 'ATTENTION REQUIRED';
+      const statusColor = subdomain.cert?.[0] ? 'Secure Certificate Found' : 'Security Issues Detected';
+      addField('Security Status', securityStatus, false, !subdomain.cert?.[0]);
       addField('Certificate Status', statusColor);
       addField('Open Ports', `${subdomain.nmap?.open_ports?.length || 0} ports discovered`);
       
@@ -472,8 +472,8 @@ pdf.text(
 
       // SSL/TLS Certificate Analysis
       addSectionHeader('SSL/TLS Certificate Analysis');
-      addField('Certificate Valid', subdomain.cert[0] ? 'Yes' : 'No', false, !subdomain.cert[0]);
-      addField('Expiry Date', subdomain.cert[1] || 'Not Available');
+      addField('Certificate Valid', subdomain.cert?.[0] ? 'Yes' : 'No', false, !subdomain.cert?.[0]);
+      addField('Expiry Date', subdomain.cert?.[1] || 'Not Available');
       
       if (subdomain.cert_details) {
         addField('Subject', subdomain.cert_details.subject_common_name || 'N/A');
@@ -527,6 +527,19 @@ pdf.text(
       }
 
       yPosition += 10;
+    // Security Alerts Analysis
+addSectionHeader('Security Vulnerability Assessment (ZAP)');
+const zapAlerts = subdomain.zap_alerts || [];
+
+addField('Total Alerts', zapAlerts.length > 0 ? `${zapAlerts.length} security issues detected` : 'No vulnerabilities found');
+
+if (zapAlerts.length > 0) {
+  zapAlerts.forEach((alert, index) => {
+    addField(`${alert.alert || 'Unknown Alert'}`, `${alert.risk || 'Unknown Risk'} - ${alert.url || 'No URL'}`, true);
+  });
+}
+
+yPosition += 10;
 
       // DNS Analysis
       addSectionHeader('DNS Infrastructure Analysis');
@@ -587,7 +600,7 @@ pdf.text(
       addSectionHeader('Security Recommendations');
       
       const recommendations = [];
-      if (!subdomain.cert[0]) {
+      if (!subdomain.cert?.[0]) {
         recommendations.push('Implement SSL/TLS certificate for secure communications');
       }
       if (subdomain.nmap?.open_ports && subdomain.nmap.open_ports.length > 5) {
@@ -632,6 +645,7 @@ pdf.text(
       
     } catch (error) {
       console.error('Error generating PDF:', error);
+
       alert('Failed to generate PDF. Please try again.');
     } finally {
       setIsGenerating(false);

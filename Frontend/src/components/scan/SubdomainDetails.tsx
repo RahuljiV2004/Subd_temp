@@ -18,7 +18,8 @@ import {
   CircleDot, 
   CircleDashed 
 } from 'lucide-react';
-import type { Subdomain } from '@/types/subdomain';
+import { ShieldCheck, Link2, Info, Wrench, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import type { Subdomain } from '../../types/subdomain';
 
 interface SubdomainDetailsProps {
   subdomain: Subdomain;
@@ -30,13 +31,18 @@ interface SubdomainDetailsProps {
   
 export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetailsProps) {
   // ✅ Put your own Mapbox Access Token here
-   
+   const [isOpen, setIsOpen] = useState(false);
   const mapContainer = useRef(null);
   const mapInstance = useRef(null);
 
   mapboxgl.accessToken = 'pk.eyJ1IjoicmFodWwxMjM0amkiLCJhIjoiY20xdXFyOWloMDNxbTJqczdwMGYxbDRqeiJ9.vyf3dcUVhcM8a5R_K5VC-A';
-
-    
+  
+  // Dynamic border color based on risk:
+  const borderColor =
+    alert.risk === "Low" ? "border-green-500" :
+    alert.risk === "Medium" ? "border-yellow-500" :
+    alert.risk === "High" ? "border-red-500" : "border-gray-500";
+  
   useEffect(() => {
     document.body.classList.add('modal-open');
     return () => document.body.classList.remove('modal-open');
@@ -51,7 +57,7 @@ export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetail
 
 
   const getSSLStatus = () => {
-    if (subdomain.cert[0]) {
+    if (subdomain.cert?.[0]) {
       return (
         <span className="flex items-center gap-1">
           <Shield className="text-green-500" size={16} />
@@ -87,27 +93,40 @@ export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetail
     }
   };
 
-  const getStatusBadge = (status: number) => {
-    if (status >= 200 && status < 300) {
-      return (
-        <span className="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
-          {status}
-        </span>
-      );
-    }
-    if (status >= 300 && status < 400) {
-      return (
-        <span className="px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-          {status}
-        </span>
-      );
-    }
+  
+const getStatusBadge = (status?: number | null) => {
+  if (typeof status !== "number" || isNaN(status)) {
     return (
-      <span className="px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
-        {status}
+      <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-zinc-700 text-zinc-300 border border-zinc-500 shadow-inner">
+        N/A
       </span>
     );
+  }
+
+  let color: "green" | "yellow" | "red" = "red";
+
+  if (status >= 200 && status < 300) {
+    color = "green";
+  } else if (status >= 300 && status < 400) {
+    color = "yellow";
+  }
+
+  const colors = {
+    green: "bg-emerald-600 text-emerald-100 border-emerald-500",
+    yellow: "bg-yellow-500 text-yellow-50 border-yellow-400",
+    red: "bg-rose-600 text-rose-100 border-rose-500",
   };
+
+  return (
+    <span
+      className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold border shadow-inner ${colors[color]}`}
+    >
+      {status}
+    </span>
+  );
+};
+
+
   const [ports, setPorts] = useState(subdomain.nmap?.open_ports || []);
 
   // ✅ On mount: if no open_ports, fetch once from DB
@@ -129,6 +148,8 @@ export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetail
       console.error("Error fetching ports:", err);
     }
   };
+ 
+
   const [refreshing, setRefreshing] = useState(false);
 
 const refreshPorts = async () => {
@@ -142,8 +163,10 @@ const refreshPorts = async () => {
   }
 };
 
-const [location, setLocation] = useState(null);
 
+
+const [location, setLocation] = useState(null);
+const [expandedAlerts, setExpandedAlerts] = useState({});
   // ✅ Fetch Lat/Lng from first IP
   useEffect(() => {
     const firstIP = subdomain.ip?.[0];
@@ -235,7 +258,7 @@ const [location, setLocation] = useState(null);
           Running...
         </span>
       ) : (
-        "Run Nmap Scan"
+        "Run Nmap and Zap"
       )}
     </button>
 
@@ -261,74 +284,7 @@ const [location, setLocation] = useState(null);
   </button>
 </div>
 
-        {/* <div className="modal-header">
-         <div className="flex items-center gap-4">
-  <h2 className="modal-title font-mono text-2xl tracking-wider">
-    <span className="text-primary-70">&gt;</span> {subdomain.domain}
-  </h2>
-  <a
-    href={`http://${subdomain.domain}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-base px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold hover:bg-primary/20 transition"
-  >
-    Visit
-  </a>
   
-  <button
-      onClick={handleClick}
-      disabled={loading}
-      className={`text-base px-4 py-1.5 rounded-full border text-indigo-400 transition 
-        ${loading ? "bg-indigo-500/30 border-indigo-500/50 cursor-not-allowed" : "bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20"}`}
-    >
-      {loading ? (
-        <span className="flex items-center gap-2">
-          <svg
-            className="animate-spin h-4 w-4 text-indigo-400"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
-          Running...
-        </span>
-      ) : (
-        "Run Nmap Scan"
-      )}
-    </button>
-    <button
-    onClick={refreshPorts}
-    disabled={refreshing}
-    className={`text-base px-4 py-1.5 rounded-full border text-indigo-400 transition flex items-center gap-2 
-      ${refreshing
-        ? "bg-indigo-500/30 border-indigo-500/50 cursor-not-allowed"
-        : "bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20"}`}
-  >
-    <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-    {refreshing ? "Refreshing..." : "Refresh Ports"}
-  </button>
- 
-  
-  <PDFDownloadButton subdomain={subdomain} />
-  
-</div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={24} />
-          </button>
-        </div> */}
 
         <div className="modal-content">
 
@@ -391,7 +347,7 @@ const [location, setLocation] = useState(null);
                   <div className="modal-grid-value text-primary flex items-center gap-2">
                     {getStatusIcon(subdomain.http[0])}
                     {getStatusBadge(subdomain.http[0])}
-                    <span className="text-primary-50">{subdomain.http[1]}</span>
+                    <span className="text-primary-50">{subdomain.http?.[1]}</span>
                   </div>
                 </div>
                 <div className="modal-grid-item">
@@ -404,7 +360,7 @@ const [location, setLocation] = useState(null);
                   <div className="modal-grid-value text-primary flex items-center gap-2">
                     {getStatusIcon(subdomain.https[0])}
                     {getStatusBadge(subdomain.https[0])}
-                    <span className="text-primary-50">{subdomain.https[2]}</span>
+                    <span className="text-primary-50">{subdomain.https?.[2]}</span>
                   </div>
                 </div>
               </div>
@@ -463,7 +419,7 @@ const [location, setLocation] = useState(null);
                   <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Expiry Date</div>
                   <div className="modal-grid-value text-primary flex items-center gap-2">
                     <Clock className="text-primary-50" size={16} />
-                    <span>{subdomain.cert[1]}</span>
+                    <span>{subdomain.cert?.[1]}</span>
                   </div>
                 </div>
                 <div className="modal-grid-item">
@@ -566,6 +522,85 @@ const [location, setLocation] = useState(null);
   </div>
 </div>
 
+
+<div className="modal-section">
+  <h3 className="modal-section-title text-red-500 text-xl font-bold">
+    &gt;&gt; Security Alerts (ZAP)
+  </h3>
+  <div className="modal-section-content">
+    <div className="bg-black p-4 rounded-md text-gray-200 font-mono text-sm space-y-4 border border-gray-700 shadow-lg">
+      {!subdomain.zap_alerts || subdomain.zap_alerts.length === 0 ? (
+        <span className="text-gray-500 italic">No security alerts detected</span>
+      ) : (
+        subdomain.zap_alerts.map((alert, idx) => {
+          const isExpanded = expandedAlerts[idx] || false;
+          
+          const toggleAlert = () => {
+            setExpandedAlerts(prev => ({
+              ...prev,
+              [idx]: !prev[idx]
+            }));
+          };
+
+          return (
+            <div key={idx} className="border border-purple-400 rounded-lg bg-gray-900">
+              <div 
+                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-800 transition-colors"
+                onClick={toggleAlert}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-yellow-400">⚠</span>
+                  <span className="font-bold text-purple-400">{alert.alert}</span>
+                  <span className={
+                    alert.risk === "Low" ? "text-green-400 font-bold text-xs px-2 py-1 bg-green-900 rounded" :
+                    alert.risk === "Medium" ? "text-yellow-400 font-bold text-xs px-2 py-1 bg-yellow-900 rounded" :
+                    alert.risk === "High" ? "text-red-400 font-bold text-xs px-2 py-1 bg-red-900 rounded" : 
+                    "text-gray-400 font-bold text-xs px-2 py-1 bg-gray-800 rounded"
+                  }>
+                    {alert.risk}
+                  </span>
+                </div>
+                <span className="text-gray-400 text-lg">
+                  {isExpanded ? '▼' : '▶'}
+                </span>
+              </div>
+
+              {isExpanded && (
+                <div className="px-3 pb-3 space-y-2 text-xs border-t border-gray-700">
+                  <div className="flex flex-wrap mt-2">
+                    <span className="font-bold text-teal-300 mr-2">URL:</span>
+                    <span className="text-blue-300 break-all">{alert.url}</span>
+                  </div>
+
+                  <div className="flex flex-wrap">
+                    <span className="font-bold text-teal-300 mr-2">Description:</span>
+                    <span className="text-gray-300">{alert.description}</span>
+                  </div>
+
+                  <div className="flex flex-wrap">
+                    <span className="font-bold text-teal-300 mr-2">Solution:</span>
+                    <span className="text-gray-300">{alert.solution}</span>
+                  </div>
+
+                  {alert.reference && (
+                    <div className="flex flex-wrap">
+                      <span className="font-bold text-teal-300 mr-2">References:</span>
+                      <div className="flex flex-col gap-1">
+                        {alert.reference.split('\n').map((ref, refIdx) => (
+                          <span key={refIdx} className="text-blue-300 break-all">{ref}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  </div>
+</div>
 
           <div className="modal-section">
   <h3 className="modal-section-title text-green-500 text-xl font-bold">&gt;&gt; DNSDumpster Details</h3>
