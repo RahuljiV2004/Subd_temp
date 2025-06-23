@@ -65,7 +65,7 @@ def resultssubfinder():
     if not stored:
         return jsonify({"error": "No stored results"}), 404
 
-    stored_domain = stored.get("domain", "")
+    stored_domain = stored.get("subdomain", "")
     print(f"Stored domain: {stored_domain}")
 
     if stored_domain.endswith(allowed):

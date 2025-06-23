@@ -450,7 +450,7 @@ const handleScan = async (domain: string, tool: string) => {
                   <SubdomainCardSubfinder
                     key={subdomain.subdomain}
                     subdomain={subdomain}
-                    onClick={() => setSelectedSubdomain(subdomain)}
+                    onSelect={() => setSelectedSubdomain(subdomain)}
                   />
                 ) : (
                   <SubdomainCard

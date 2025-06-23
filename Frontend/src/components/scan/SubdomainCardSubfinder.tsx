@@ -65,7 +65,7 @@ export function SubdomainCardSubfinder({ subdomain, onSelect }: SubdomainCardPro
         className={`card shadow-sm bg-black/50 hover:bg-black/60 whitespace-normal overflow-hidden backdrop-blur-sm ${getBorderColorClass()}`}
         onClick={() => {
           setShowDetails(true);
-          onSelect();
+          onClose();
         }}
       >
         <div className="p-6 space-y-6">
@@ -98,14 +98,14 @@ export function SubdomainCardSubfinder({ subdomain, onSelect }: SubdomainCardPro
                 <span className="text-sm">IP Addresses</span>
               </div>
               <div className="flex flex-wrap gap-2 overflow-x-auto">
-                {Array.isArray(subdomain.httpx_a) && subdomain.httpx_a.length > 0 && (
+                {Array.isArray(subdomain.dnsx_a) && subdomain.dnsx_a.length > 0 && (
                   <>
                     <span className="px-3 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 break-all">
-                      {subdomain.httpx_a[0]}
+                      {subdomain.dnsx_a[0]}
                     </span>
-                    {subdomain.httpx_a.length > 1 && (
+                    {subdomain.dnsx_a.length > 1 && (
                       <span className="px-3 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                        +{subdomain.httpx_a.length - 1} more
+                        +{subdomain.dnsx_a.length - 1} more
                       </span>
                     )}
                   </>

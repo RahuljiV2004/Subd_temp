@@ -258,7 +258,7 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
           Running...
         </span>
       ) : (
-        "Run Nmap and Zap"
+        "Run Nmap"
       )}
     </button>
 
@@ -419,7 +419,7 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
                   <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Expiry Date</div>
                   <div className="modal-grid-value text-primary flex items-center gap-2">
                     <Clock className="text-primary-50" size={16} />
-                    <span>{subdomain.cert?.[1]}</span>
+                    <span>{subdomain.cert?.[1]||subdomain.cert_details.valid_to}</span>
                   </div>
                 </div>
                 <div className="modal-grid-item">
@@ -601,13 +601,13 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
     </div>
   </div>
 </div>
-
+{/* 
           <div className="modal-section">
   <h3 className="modal-section-title text-green-500 text-xl font-bold">&gt;&gt; DNSDumpster Details</h3>
   <div className="modal-section-content">
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-4"> */}
       
-      {/* A Records */}
+      {/* A Records
       <div className="modal-grid-item">
         <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">A Records</div>
         <div className="modal-grid-value text-primary flex flex-wrap gap-2 min-h-[1.5rem]">
@@ -624,9 +624,9 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
             <span className="text-muted-foreground">—</span>
           )}
         </div>
-      </div>
+      </div> */}
 
-      {/* MX Records */}
+      {/* MX Records
       <div className="modal-grid-item">
         <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">MX Records</div>
         <div className="modal-grid-value text-primary flex flex-wrap gap-2 min-h-[1.5rem]">
@@ -643,13 +643,13 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
             <span className="text-muted-foreground">—</span>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* You can add NS Records, CNAME Records, etc. the same way */}
       
-    </div>
+    {/* </div>
   </div>
-</div>
+</div> */}
 
 <div className="modal-section">
   <h3 className="modal-section-title text-green-500 text-xl font-bold">&gt;&gt; MXToolbox Details</h3>
@@ -659,7 +659,7 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
       {/* Domain Scanned */}
       <div className="modal-grid-item">
         <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Domain</div>
-        <div className="modal-grid-value text-primary">{subdomain.mxtoolbox?.commandArgument || '—'}</div>
+        <div className="modal-grid-value text-primary">{subdomain.domain || '—'}</div>
       </div>
 
       {/* Time Recorded */}
