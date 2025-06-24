@@ -78,7 +78,7 @@ export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetail
   const handleClick = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/scan_subdomain", {
+      const response = await fetch("http://localhost:5000/api/scan_subdomain_subfinder", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -143,7 +143,7 @@ const getStatusBadge = (status?: number | null) => {
 
   const fetchPorts = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/getPorts?subdomain=${subdomain.subdomain}`);
+      const res = await fetch(`http://127.0.0.1:5000/api/getPorts_subfinder?subdomain=${subdomain.subdomain}`);
       const data = await res.json();
       setPorts(data.open_ports || []);
     } catch (err) {
@@ -203,6 +203,8 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
       new mapboxgl.Marker().setLngLat([location.lng, location.lat]).addTo(mapInstance.current);
     }
   }, [location]);
+
+  
 
   return (
     <div className="modal-overlay " onClick={onClose}>
@@ -346,7 +348,40 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
       </div>
     </div>
 
-   
+   <div className="modal-section">
+      <h3 className="modal-section-title text-green-500 text-xl font-bold">
+        &gt;&gt; Open Ports
+      </h3>
+
+      <div className="modal-section-content">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="modal-grid-item col-span-2">
+            <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">
+              Ports
+            </div>
+
+            <div className="modal-grid-value text-primary flex flex-wrap gap-2">
+              {ports.length > 0 ? (
+                ports.map((port) => (
+                  <span
+                    key={port}
+                    className="px-2 py-1 bg-[#00FFFF]/10 border border-[#00FFFF] rounded text-[#00FFFF] text-sm"
+                  >
+                    {port}
+                  </span>
+                ))
+              ) : (
+                <span className="text-primary-50">
+                  No Open Ports found
+                </span>
+              )}
+            </div>
+
+            
+          </div>
+        </div>
+      </div>
+    </div>
           <div className="modal-section">
             <h3 className="modal-section-title text-green-500 text-xl font-bold">&gt;&gt; HTTP Status</h3>
             <div className="modal-section-content">

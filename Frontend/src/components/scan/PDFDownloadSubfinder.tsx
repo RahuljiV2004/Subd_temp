@@ -42,13 +42,13 @@ export default function SubfinderPDFDownloadButton({ subdomain }: PDFDownloadBut
       pdf.rect(0, 0, pageWidth, 60, 'F');
       
       // Add CyStar logo placeholder (you can replace with actual logo)
-      pdf.setFillColor(59, 130, 246); // blue-500
-      pdf.roundedRect(margin, 15, 40, 30, 5, 5, 'F');
+      pdf.addImage("https://media.licdn.com/dms/image/v2/D560BAQEPEwnV8TMpSQ/company-logo_200_200/company-logo_200_200/0/1728124533458?e=2147483647&v=beta&t=fZUf-nIj-5P4SiI_cFGbaMQxqMl1AOIqZqKSegdOs6U", 'PNG', margin, 15, 40, 30);
+  
       
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('CyStar', margin + 8, 35);
+     
       
       // Main title
       pdf.setTextColor(255, 255, 255);
@@ -160,7 +160,7 @@ export default function SubfinderPDFDownloadButton({ subdomain }: PDFDownloadBut
       addField('IP Addresses', subdomain.httpx_a?.join(', ') || 'Not Available', true);
       addField('IPv4 Count', (subdomain.httpx_a?.length || 0).toString());
       addField('Page Title', subdomain.httpx_title || 'Not Available', true);
-
+      addField('Open Ports', `${subdomain.nmap?.open_ports?.length || 0} ports discovered`);
       yPosition += 10;
 
       // HTTP/HTTPS Status

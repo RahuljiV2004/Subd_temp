@@ -63,7 +63,7 @@ export default function PDFDownloadButton({ subdomain }: PDFDownloadButtonProps)
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(22);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('SUBDOMAIN SECURITY REPORT', margin + 50, 25);
+      pdf.text('KNOCKPY SECURITY REPORT', margin + 50, 25);
       
       // Subtitle
       pdf.setFontSize(12);

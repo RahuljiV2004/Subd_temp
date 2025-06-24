@@ -106,6 +106,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+
 export function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,24 +114,42 @@ export function Register() {
   const [error, setError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setError('');
+
+  //   if (password !== confirmPassword) {
+  //     setError('Passwords do not match');
+  //     return;
+  //   }
+
+  //   try {
+  //   await register(email, password);
+  //   toast.success('✅ Registration successful!');
+  //   navigate('/login');
+  // } catch {
+  //   setError('Registration failed. Please try again.');
+  // }
+
+  // };
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+  if (password !== confirmPassword) {
+    setError('Passwords do not match');
+    return;
+  }
 
-    try {
+  try {
     await register(email, password);
-    toast.success('✅ Registration successful!');
-    navigate('/login');
+    toast.success('✅ Registered! Check your email for the OTP.');
+    navigate('/verify-otp', { state: { email } }); // pass email to OTP page
   } catch {
     setError('Registration failed. Please try again.');
   }
+};
 
-  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-purple-900 via-slate-900 to-purple-950 overflow-hidden">

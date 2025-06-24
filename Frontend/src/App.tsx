@@ -15,9 +15,11 @@ import { AuthProvider } from './context/AuthContext'
 import type { SubdomainKnockpy } from './types/subdomain'
 import type { SubdomainSubfinder } from './types/subdomain'
 import { mockSubdomains, mockTrendData } from './types/subdomain'
+import VerifyOtp from './components/auth/verify-otp'
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import Swal from 'sweetalert2';
 import { SubdomainCardSubfinder } from './components/scan/SubdomainCardSubfinder'
+import { VerificationSuccess } from './components/auth/VerificationPage'
 function Dashboard() {
   const [isLoading, setIsLoading] = useState(false)
   // const [subdomains, setSubdomains] = useState<Subdomain[]>([])
@@ -500,6 +502,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/verification-success" element={<ProtectedRoute><VerificationSuccess /></ProtectedRoute>} />
           <Route
             path="/"
             element={

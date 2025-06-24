@@ -27,7 +27,15 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
+from flask_mail import Mail, Message
 
+# Configure Flask-Mail once:
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = ''
+app.config['MAIL_PASSWORD'] = ''
+mail = Mail(app)
 
 # JWT config
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
@@ -75,21 +83,6 @@ def resultssubfinder():
         # ❌ Domain doesn't match → block
         return jsonify({"error": "Unauthorized"}), 403
 
-# @app.route("/results")
-# @jwt_required()
-# def results():
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({"error": "Unauthorized"}), 401
-    
-#     if user:
-#         allowed=user.organization
-#         print(allowed)
-#         stored=collection.find_one({},{"_id": 0})
-#         stored_org=stored.get("domain")
-#         if stored_org.endswith(allowed):
-#             return jsonify(list(collection.find({}, {"_id": 0})))
 @app.route("/results")
 @jwt_required()
 def results():
@@ -115,28 +108,40 @@ def results():
         # ❌ Domain doesn't match → block
         return jsonify({"error": "Unauthorized"}), 403
 
-# @app.route("/results")
-# @jwt_required()
-# def results():
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({"error": "Unauthorized"}), 401
-
-#     allowed_suffix = user.organization  # e.g., "snuchennai.edu.in"
-
-#     stored_result = collection.find_one({}, {"_id": 0})
-
-#     if not stored_result:
-#         return jsonify({"error": "No results found"}), 404
-
-#     if stored_result.get("domain", "").endswith(allowed_suffix):
-#         print("got it")
-#         return jsonify(list(collection.find({}, {"_id": 0})))
-#     else:
-#         return jsonify({"error": "Unauthorized access"}), 403
 
 
+
+
+# @app.route('/auth/register', methods=['POST'])
+# def register():
+#     data = request.get_json()
+#     email = data.get('email')
+#     password = data.get('password')
+
+#     if not email or not password:
+#         return jsonify({'error': 'Email and password are required'}), 400
+
+#     existing_user = User.find_by_email(email)
+#     if existing_user:
+#         print("adsjsdio")
+
+#         return jsonify({'error': 'Email already registered'}), 400
+
+#     user = User(email=email, password=password)
+#     user.save()
+
+#     # access_token = create_access_token(identity=str(user._id))
+#     access_token = create_access_token(
+#     identity=str(user._id),
+#     additional_claims={"jti": str(uuid4())}
+# )
+#     resp = jsonify({
+#         'message': 'User registered successfully',
+#         'user': user.to_dict()
+#     })
+#     # ✅ Store token in cookie
+#     set_access_cookies(resp, access_token)
+#     return resp, 201
 
 @app.route('/auth/register', methods=['POST'])
 def register():
@@ -149,25 +154,63 @@ def register():
 
     existing_user = User.find_by_email(email)
     if existing_user:
-        print("adsjsdio")
-
         return jsonify({'error': 'Email already registered'}), 400
 
     user = User(email=email, password=password)
     user.save()
 
-    # access_token = create_access_token(identity=str(user._id))
-    access_token = create_access_token(
-    identity=str(user._id),
-    additional_claims={"jti": str(uuid4())}
-)
+    # ✅ Generate OTP and save:
+    otp = user.set_otp()
+
+    # # ✅ Send OTP email
+    # msg = Message('Verify your email',
+    #               sender='youremail@gmail.com',
+    #               recipients=[email])
+    # msg.body = f'Your OTP is: {otp}. It expires in 10 minutes.'
+    # mail.send(msg)
+    msg = Message('Verify your email', 
+              sender='youremail@gmail.com', 
+              recipients=[email])
+
+    # Plain text version
+    msg.body = f'Your OTP is: {otp}. It expires in 10 minutes.'
+
+    # HTML version
+    msg.html = render_template('email/verification.html', otp=otp)
+
+    mail.send(msg)
+
     resp = jsonify({
-        'message': 'User registered successfully',
+        'message': 'User registered. Please check your email for the OTP to verify your account.',
         'user': user.to_dict()
     })
-    # ✅ Store token in cookie
-    set_access_cookies(resp, access_token)
     return resp, 201
+
+# @app.route('/auth/login', methods=['POST'])
+# def login():
+#     data = request.get_json()
+#     email = data.get('email')
+#     password = data.get('password')
+
+#     if not email or not password:
+#         return jsonify({'error': 'Email and password are required'}), 400
+
+#     user = User.find_by_email(email)
+#     if not user or not user.check_password(password):
+#         return jsonify({'error': 'Invalid email or password'}), 401
+
+#     user.last_login = datetime.utcnow()
+#     user.update()
+
+#     access_token = create_access_token(identity=str(user._id))
+#     print(access_token)
+#     resp = jsonify({
+#         'message': 'Login successful',
+#         'user': user.to_dict()
+#     })
+#     # ✅ Store token in cookie
+#     set_access_cookies(resp, access_token)
+#     return resp, 200
 
 @app.route('/auth/login', methods=['POST'])
 def login():
@@ -182,18 +225,82 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid email or password'}), 401
 
+    # ✅ Block unverified user
+    if not user.is_verified:
+        return jsonify({'error': 'Please verify your email first.'}), 403
+
     user.last_login = datetime.utcnow()
     user.update()
 
     access_token = create_access_token(identity=str(user._id))
-    print(access_token)
     resp = jsonify({
         'message': 'Login successful',
         'user': user.to_dict()
     })
-    # ✅ Store token in cookie
     set_access_cookies(resp, access_token)
     return resp, 200
+
+# @app.route('/auth/verify-otp', methods=['POST'])
+# def verify_otp():
+#     data = request.get_json()
+#     email = data.get('email')
+#     otp = data.get('otp')
+
+#     if not email or not otp:
+#         return jsonify({'error': 'Email and OTP are required'}), 400
+
+#     user = User.find_by_email(email)
+#     if not user:
+#         return jsonify({'error': 'User not found'}), 404
+
+#     success, message = user.verify_otp(otp)
+#     if not success:
+#         return jsonify({'error': message}), 400
+    
+#     user.last_login = datetime.utcnow()
+#     user.update()
+
+#     access_token = create_access_token(identity=str(user._id))
+#     resp = jsonify({
+#         'message': 'Login successful',
+#         'user': user.to_dict()
+#     })
+#     set_access_cookies(resp, access_token)
+
+#     return jsonify({'message': 'Email verified successfully! You can now log in.'}), 200
+@app.route('/auth/verify-otp', methods=['POST'])
+def verify_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+
+    if not email or not otp:
+        return jsonify({'error': 'Email and OTP are required'}), 400
+
+    user = User.find_by_email(email)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    success, message = user.verify_otp(otp)
+    if not success:
+        return jsonify({'error': message}), 400
+
+    # ✅ Optionally update last login timestamp
+    user.last_login = datetime.utcnow()
+    user.update()
+
+    # ✅ Create JWT and set it in cookie
+    access_token = create_access_token(identity=str(user._id))
+    resp = jsonify({
+        'message': '✅ Email verified and logged in!',
+        'user': user.to_dict()
+    })
+    set_access_cookies(resp, access_token)
+
+    # ✅ Return the SAME response — so cookie is included!
+    return resp, 200
+
+
 
 @app.route('/auth/logout', methods=['POST'])
 def logout():
@@ -216,69 +323,6 @@ def get_current_user():
 def test():
     return jsonify({"msg": "You are authenticated!"})
 
-# @app.route("/rescan/stream_using_subfinder")
-# def rescan_stream_subfinder():
-#     # ✅ 1. Verify JWT from cookie
-#     verify_jwt_in_request()
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({'error': 'User not found'}), 404
-
-#     # ✅ 2. Validate domain param
-#     domain = request.args.get('domain')
-#     if not domain:
-#         return jsonify({'error': 'Missing domain parameter'}), 400
-
-#     if not domain.endswith(user.organization):
-#         return jsonify({'error': f'You can only scan domains ending with {user.organization}'}), 403
-
-#     # ✅ 3. Streaming generator with heartbeat
-#     def generate():
-#         yield ": connected\n\n"  # immediate connection ping
-#         last_sent = time.time()
-
-#         try:
-#             # Start the Subfinder scan generator
-#             scan = run_subfinder_and_enhance_streaming(
-#                 domain,
-#                 collection,
-#                 MXTOOLBOX_API_KEY,
-#                 DNSDUMPSTER_API_KEY,
-#                 SUBFINDER_PATH  # Pass subfinder path
-#             )
-
-#             while True:
-#                 try:
-#                     # Try to get next real result
-#                     message = next(scan)
-#                     yield f"data: {message}\n\n"
-#                     last_sent = time.time()
-
-#                 except StopIteration:
-#                     # ✅ End of scan: send a final done marker
-#                     yield 'data: {"type":"done","message":"Scan complete"}\n\n'
-#                     break
-
-#                 except Exception as e:
-#                     # ✅ If scan crashes: send error
-#                     yield f'data: {{"type":"error","message":"Subfinder scan error: {str(e)}"}}\n\n'
-#                     break
-
-#                 # ✅ Heartbeat: if no data in 10s, send comment
-#                 if time.time() - last_sent > 10:
-#                     yield ": keep-alive\n\n"
-#                     last_sent = time.time()
-
-#                 # ✅ Small sleep avoids busy loop
-#                 time.sleep(0.5)
-
-#         except Exception as e:
-#             # ✅ Handle initial scan setup errors
-#             yield f'data: {{"type":"error","message":"Failed to start Subfinder scan: {str(e)}"}}\n\n'
-
-#     # ✅ 4. Return properly as SSE response
-#     return Response(generate(), mimetype="text/event-stream")
 
 
 @app.route("/rescan/stream_subfinder_dnsx_httpx")
@@ -300,41 +344,7 @@ def rescan_stream_subfinder_dnsx_httpx():
             "error": f"You can only scan domains ending with {user.organization}"
         }), 403
 
-    # # ✅ 3️⃣ Streaming SSE generator with heartbeat
-    # def generate():
-    #     yield ": connected\n\n"  # initial ping for SSE
-
-    #     last_sent = time.time()
-
-    #     try:
-    #         scan = run_subfinder_dnsx_httpx_stream(domain, collection_subfinder)
-
-    #         while True:
-    #             try:
-    #                 message = next(scan)
-    #                 yield f"data: {message}\n\n"
-    #                 last_sent = time.time()
-
-    #             except StopIteration:
-    #                 # ✅ Done!
-    #                 yield 'data: {"type":"done","message":"Pipeline complete"}\n\n'
-    #                 break
-
-    #             except Exception as e:
-    #                 # ✅ Streaming failure
-    #                 yield f'data: {{"type":"error","message":"Pipeline error: {str(e)}"}}\n\n'
-    #                 break
-
-    #             # ✅ Heartbeat every 10s if no log
-    #             if time.time() - last_sent > 10:
-    #                 yield ": keep-alive\n\n"
-    #                 last_sent = time.time()
-
-    #             time.sleep(0.5)
-
-        # except Exception as e:
-    #         # ✅ If the generator fails at startup
-    #         yield f'data: {{"type":"error","message":"Could not start pipeline: {str(e)}"}}\n\n'
+    
     def generate():
         yield ": connected\n\n"  # SSE comment/ping
 
@@ -390,6 +400,25 @@ def get_ports():
 
     return jsonify({"open_ports": open_ports}), 200
 
+
+@app.route('/api/getPorts_subfinder', methods=['GET'])
+def get_ports_subfinder():
+    domain = request.args.get('subdomain')
+
+    if not domain:
+        return jsonify({"error": "Missing 'subdomain' parameter"}), 400
+
+    # Find document with this domain
+    doc = collection_subfinder.find_one({"subdomain": domain})
+
+    if not doc:
+        return jsonify({"error": "No record found for this domain"}), 404
+
+    # ✅ Extract ports from nested nmap field
+    open_ports = doc.get("nmap", {}).get("open_ports", [])
+
+    return jsonify({"open_ports": open_ports}), 200
+
 @app.route('/api/getZapAlerts', methods=['GET'])
 def get_zap_alerts():
     domain = request.args.get('subdomain')
@@ -429,6 +458,26 @@ def scan_subdomain():
 
     return jsonify({ "subdomain": subdomain, "nmap": nmap_result })
 
+@app.route('/api/scan_subdomain_subfinder', methods=['POST'])
+def scan_subdomain_subfinder():
+    data = request.json
+    if not data or 'subdomain' not in data:
+        return jsonify({"error": "Missing 'subdomain' in request body."}), 400
+
+    subdomain = data['subdomain']
+    entry = collection_subfinder.find_one({"subdomain": subdomain})
+    if not entry:
+        return jsonify({"error": f"Subdomain '{subdomain}' not found in database."}), 404
+
+    nmap_result = run_single_nmap_scan(subdomain)
+
+    collection_subfinder.update_one(
+        {"_id": entry["_id"]},
+        {"$set": {"nmap": nmap_result}}
+    )
+
+    return jsonify({ "subdomain": subdomain, "nmap": nmap_result })
+
 @app.route('/api/scan_subdomain_zap', methods=['POST'])
 def scan_subdomain_zap():
     data = request.json
@@ -449,23 +498,7 @@ def scan_subdomain_zap():
 
     return jsonify({ "subdomain": subdomain, "zap": zap_result })
 
-# @app.route("/api/scan_subfinder", methods=['POST'])
-# def scan_subdomain_using_subfinder():
-#     data = request.json
-#     print(data)
-#     if not data or 'subdomain' not in data:
-#         return jsonify({"error": "Missing 'subdomain' in request body."}), 400
 
-#     subdomain = data['subdomain']
-
-#     print(f"[INFO] Scanning: {subdomain}")
-#     results = run_subfinder_and_enrich(subdomain)
-
-#     return jsonify({
-#         "tool": "subfinder-dnsx-httpx-enrich",
-#         "subdomain": subdomain,
-#         "results": results
-#     }), 200
 
 @app.route("/rescan/stream")
 def rescan_stream():
