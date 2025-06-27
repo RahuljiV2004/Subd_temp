@@ -652,7 +652,7 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
 </div> */}
 
 <div className="modal-section">
-  <h3 className="modal-section-title text-green-500 text-xl font-bold">&gt;&gt; MXToolbox Details</h3>
+  <h3 className="modal-section-title text-green-500 text-xl font-bold">&gt;&gt; DNS Details</h3>
   <div className="modal-section-content">
     <div className="grid grid-cols-2 gap-4">
 
@@ -682,7 +682,42 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
 
       {/* Failures */}
      {/* Information */}
+<div className="modal-grid-item col-span-2">
+  <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Warnings</div>
+  <div className="modal-grid-value text-primary flex flex-col gap-4">
+    {subdomain.mxtoolbox?.Warnings?.length ? (
+      subdomain.mxtoolbox.Warnings.map((warning, i) => (
+        <div
+          key={i}
+          className="relative p-4 bg-gradient-to-br from-purple-900/10 to-purple-800/10 border border-purple-500/20 rounded-xl shadow-md overflow-hidden"
+        >
+          {/* <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 blur-xl -z-10" /> */}
+        <div className="absolute inset-0 rounded-xl bg-black blur-xl -z-10" />
 
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            <span className="modal-grid-value text-primary">{warning.Name}</span>
+          </div>
+
+          {warning.AdditionalInfo?.length ? (
+            <ul className="pl-6 space-y-1 text-sm text-white/80 list-disc">
+              {warning.AdditionalInfo.map((info, j) => (
+                <li key={j} className="flex items-start gap-2">
+                  {/* <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-[2px]" /> */}
+                  <span>{info}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-sm text-muted-foreground">No additional info</span>
+          )}
+        </div>
+      ))
+    ) : (
+      <span className="text-muted-foreground">—</span>
+    )}
+  </div>
+</div>
 <div className="modal-grid-item col-span-2">
   <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Information</div>
   <div className="modal-grid-value text-primary flex flex-col gap-4">
@@ -733,7 +768,7 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
         </div>
       </div>
 
-      {/* Related Lookups */}
+   
       <div className="modal-grid-item col-span-2">
         <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Related Lookups</div>
         <div className="modal-grid-value text-primary flex flex-col gap-1">
@@ -754,6 +789,47 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
           )}
         </div>
       </div>
+          
+
+{/* <div className="modal-grid-item col-span-2">
+  <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Warnings</div>
+  <div className="modal-grid-value text-primary flex flex-col gap-4">
+    {subdomain.mxtoolbox?.Warnings?.length ? (
+      subdomain.mxtoolbox.Warnings.map((warning, i) => (
+        <div
+          key={i}
+          className="relative group p-4 bg-gradient-to-br from-purple-900/10 to-purple-800/10 border border-purple-500/20 rounded-xl shadow-md overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/50 hover:shadow-purple-500/20"
+        >
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl -z-10" />
+
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-400" />
+            <span className="text-sm font-semibold text-purple-200">{warning.Name}</span>
+          </div>
+
+          {warning.AdditionalInfo?.length ? (
+            <ul className="pl-6 space-y-1 text-sm text-white/80 list-disc">
+              {warning.AdditionalInfo.map((info, j) => (
+                <li key={j} className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-[2px]" />
+                  <span>{info}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-sm text-muted-foreground">No additional info</span>
+          )}
+        </div>
+      ))
+    ) : (
+      <span className="text-muted-foreground">—</span>
+    )}
+  </div>
+</div> */}
+
+
+
+
 
     </div>
   </div>

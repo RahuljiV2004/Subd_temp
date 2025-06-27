@@ -368,6 +368,15 @@ yPosition += 10;
         addField(`Recommendation ${index + 1}`, rec, true);
       });
 
+      // Timestamp Information
+      yPosition += 10;
+      addSectionHeader('Scan Information');
+      if (subdomain.dnsx_timestamp) {
+        addField('DNS Scan Timestamp', subdomain.dnsx_timestamp);
+      }
+      addField('Report Generated', new Date().toLocaleString());
+      addField('Scan Method', 'Knockpy + Mxtoolbox API + ZAP + Whatweb');
+
       // Footer with enhanced styling
       const totalPages = pdf.internal.pages.length - 1;
       for (let i = 1; i <= totalPages; i++) {

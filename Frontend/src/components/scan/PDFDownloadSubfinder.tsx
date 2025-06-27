@@ -161,6 +161,7 @@ export default function SubfinderPDFDownloadButton({ subdomain }: PDFDownloadBut
       addField('IPv4 Count', (subdomain.httpx_a?.length || 0).toString());
       addField('Page Title', subdomain.httpx_title || 'Not Available', true);
       addField('Open Ports', `${subdomain.nmap?.open_ports?.length || 0} ports discovered`);
+
       yPosition += 10;
 
       // HTTP/HTTPS Status
@@ -172,6 +173,12 @@ export default function SubfinderPDFDownloadButton({ subdomain }: PDFDownloadBut
       addField('Web Accessibility', httpSecure ? 'Accessible' : 'Issues Detected', false, !httpSecure);
 
       yPosition += 10;
+
+      // Network Security
+      addSectionHeader('Network Security Analysis');
+      const ports = subdomain.nmap?.open_ports || [];
+      addField('Open Ports', ports.length > 0 ? ports.join(', ') : 'No open ports detected', true);
+      addField('Port Scan Status', ports.length > 0 ? `${ports.length} ports accessible` : 'Minimal attack surface');
 
       // TLS Certificate Analysis
       addSectionHeader('TLS Certificate Analysis');
