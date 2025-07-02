@@ -112,20 +112,22 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Palette, X, User, LogOut, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom'; // ✅ Import Link for client-side routing
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+
 const navLinks = [
   { name: 'Home', href: '/' },
-  { name: 'Scan', href: '/scan' },
-  { name: 'Docs', href: '/docs' },
+  { name: 'Scan Stats', href: '/dashboard' },
+  { name: 'Asset Manager', href: '/assets' },
   { name: 'About', href: '/about' },
 ];
 
 const colorOptions = [
   { name: 'Cyber Blue', value: 'blue', color: '#3B82F6' },
   { name: 'Hacker Purple', value: 'purple', color: '#8B5CF6' },
-  { name: 'Neutral Gray', value: 'gray', color: '#64748B' },
-  { name: 'Dark Black', value: 'black', color: '#1F2937' },
+  // { name: 'Neutral Gray', value: 'gray', color: '#64748B' },
+  // { name: 'Dark Black', value: 'black', color: '#1F2937' },
 ];
 
 export function Navbar() {
@@ -133,10 +135,9 @@ export function Navbar() {
   const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { colorPalette, setColorPalette } = useTheme();
+
   return (
     <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
       className="sticky top-0 z-50 w-full bg-black/50 backdrop-blur-md border-b border-white/20 text-white"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -144,19 +145,19 @@ export function Navbar() {
           {/* Brand */}
           <div className="flex items-center">
             <Search className="h-8 w-8 text-blue-400" />
-            <span className="ml-2 text-xl font-bold text-white">IIT-M</span>
+            <span className="ml-2 text-xl font-bold text-white">Cystar</span>
           </div>
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.name}
-                href={link.href}
+                to={link.href}
                 className="text-gray-300 hover:text-white transition-colors duration-200"
               >
                 {link.name}
-              </a>
+              </Link>
             ))}
           </div>
 
@@ -195,9 +196,9 @@ export function Navbar() {
                           <button
                             key={option.value}
                             onClick={() => {
-                         setColorPalette(option.value as any);
-                            setIsColorMenuOpen(false);
-                          }}
+                              setColorPalette(option.value as any);
+                              setIsColorMenuOpen(false);
+                            }}
                             className="w-full p-2 rounded-lg text-sm text-white transition-colors hover:bg-white/10 text-left"
                           >
                             <div className="flex items-center gap-2">
@@ -223,9 +224,9 @@ export function Navbar() {
                 className="flex items-center space-x-2 p-2 text-gray-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-white/10"
               >
                 {user?.avatar ? (
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name} 
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
                     className="w-8 h-8 rounded-full border-2 border-white/20"
                   />
                 ) : (
@@ -249,9 +250,9 @@ export function Navbar() {
                       {/* User Info */}
                       <div className="flex items-center space-x-3 pb-3 border-b border-white/10">
                         {user?.avatar ? (
-                          <img 
-                            src={user.avatar} 
-                            alt={user.name} 
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
                             className="w-10 h-10 rounded-full border-2 border-white/20"
                           />
                         ) : (
@@ -271,7 +272,7 @@ export function Navbar() {
                           <User className="w-4 h-4" />
                           <span>Profile</span>
                         </button>
-                        
+
                         <button
                           onClick={() => {
                             logout();

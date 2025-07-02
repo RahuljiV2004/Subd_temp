@@ -291,20 +291,28 @@
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-black/50;
+  background: #1f2937; /* dark gray */
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-primary-20 rounded-full hover:bg-primary-30 transition-colors;
+  background-color: #3b82f6; /* blue */
+  border-radius: 10px;
+  border: 2px solid transparent;
 }
 
-/* Selection Color */
-::selection {
-  @apply bg-primary-20 text-primary;
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #1f2937;
 }
+::selection {
+  @apply bg-blue-500 text-white;
+}
+
 .swal2-confirm.custom-confirm-button {
   background-color: blue !important;   /* Blue background */
   border: 2px solid green !important;  /* Green border */

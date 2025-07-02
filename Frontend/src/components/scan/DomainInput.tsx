@@ -193,9 +193,122 @@ export function DomainInput({ onScan, isLoading, selectedTool, setSelectedTool }
       Instantly detect potential security risks linked to your domains and stay ahead of threats.
     </p>
   </div>
+  
 </div>
 
       </div>
     </div>
   );
 }
+// import { useState } from 'react';
+// import { Search, Loader2, ShieldCheck, Radar, AlertCircle } from 'lucide-react';
+// import Typewriter from 'typewriter-effect';
+// import { useTheme } from '../../context/ThemeContext';
+
+// interface DomainInputProps {
+//   onScan: (domain: string, tool: string) => Promise<void>;
+//   selectedTool: string;
+//   setSelectedTool: (tool: string) => void;
+//   isLoading: boolean;
+// }
+
+// export function DomainInput({ onScan, isLoading, selectedTool, setSelectedTool }: DomainInputProps) {
+//   const [domain, setDomain] = useState('');
+//   const { colorPalette } = useTheme();
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (domain.trim()) {
+//       await onScan(domain.trim(), selectedTool);
+//     }
+//   };
+
+//   return (
+//     <div className="relative py-16 sm:py-20">
+//       <div className="container mx-auto px-4">
+//         {/* Typewriter */}
+//         <div className="text-center mb-8">
+//           <Typewriter
+//             options={{
+//               strings: ['Find Hidden Subdomains.', 'Detect Risks.', 'Stay Ahead.'],
+//               autoStart: true,
+//               loop: true,
+//               wrapperClassName: 'text-2xl sm:text-3xl font-bold text-[var(--color-text)]',
+//               cursorClassName: 'text-[var(--color-text)]',
+//             }}
+//           />
+//         </div>
+
+//         {/* Form */}
+//         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+//           <div className="flex flex-col sm:flex-row gap-4">
+//             <input
+//               type="text"
+//               value={domain}
+//               onChange={(e) => setDomain(e.target.value)}
+//               placeholder="Enter domain (e.g., example.com)"
+//               className="w-full px-4 py-3 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+//             />
+
+//             <select
+//               value={selectedTool}
+//               onChange={(e) => setSelectedTool(e.target.value)}
+//               className="w-full sm:w-40 px-4 py-3 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all"
+//             >
+//               <option value="knockpy">Knockpy</option>
+//               <option value="subfinder">Subfinder</option>
+//             </select>
+//           </div>
+
+//           <button
+//             type="submit"
+//             disabled={isLoading || !domain.trim()}
+//             className="mt-4 w-full sm:w-auto px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white font-medium hover:bg-[var(--color-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+//           >
+//             {isLoading ? (
+//               <>
+//                 <Loader2 className="w-5 h-5 animate-spin" />
+//                 Scanning...
+//               </>
+//             ) : (
+//               <>
+//                 <Search className="w-5 h-5" />
+//                 Scan Now
+//               </>
+//             )}
+//           </button>
+//         </form>
+
+//         {/* Feature Cards */}
+//         <div className="mt-12 grid gap-6 md:grid-cols-3">
+//           {[
+//             {
+//               icon: <ShieldCheck className="w-8 h-8 text-[var(--color-primary)]" />,
+//               title: 'Secure Your Domain',
+//               desc: 'Identify hidden subdomains to prevent unauthorized access and secure your attack surface.',
+//             },
+//             {
+//               icon: <Radar className="w-8 h-8 text-[var(--color-primary)]" />,
+//               title: 'Deep Recon',
+//               desc: 'Perform in-depth scanning to uncover overlooked assets and monitor your digital footprint.',
+//             },
+//             {
+//               icon: <AlertCircle className="w-8 h-8 text-[var(--color-primary)]" />,
+//               title: 'Risk Detection',
+//               desc: 'Instantly detect potential security risks linked to your domains and stay ahead of threats.',
+//             },
+//           ].map(({ icon, title, desc }, idx) => (
+//             <div
+//               key={idx}
+//               className="p-6 rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text)] shadow-md transition-all hover:shadow-lg"
+//             >
+//               <div className="mb-3">{icon}</div>
+//               <h3 className="text-lg font-semibold mb-2">{title}</h3>
+//               <p className="text-sm text-[var(--color-text)]/80">{desc}</p>
+//             </div>
+//           ))}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }

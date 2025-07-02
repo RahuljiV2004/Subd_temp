@@ -171,7 +171,7 @@ const [location, setLocation] = useState(null);
 const [expandedAlerts, setExpandedAlerts] = useState({});
   // ✅ Fetch Lat/Lng from first IP
   useEffect(() => {
-    const firstIP = subdomain.httpx_a?.[0];
+    const firstIP = subdomain.dnsx_a?.[0];
     if (firstIP) {
       const getLatLngFromIP = async (ip: string) => {
   try {
@@ -315,7 +315,7 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
                   <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">IP Address</div>
                     
                   <div className="modal-grid-value text-primary flex flex-wrap gap-2">
-                   {subdomain.httpx_a?.length > 0 ? (
+                   {/* {subdomain.httpx_a?.length > 0 ? (
                 subdomain.httpx_a.map((ip, idx) => (
                   <span
                     key={idx}
@@ -327,7 +327,22 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
                 ))
               ) : (
                 <span className="text-gray-400 text-sm">No IPs found</span>
-              )}
+              )} */}
+              {Array.isArray(subdomain.dnsx_a) && subdomain.dnsx_a.length > 0 ? (
+  <div className="flex flex-wrap gap-2">
+    {subdomain.dnsx_a.map((ip, index) => (
+      <span
+        key={index}
+        className="px-3 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 break-all"
+      >
+        {ip}
+      </span>
+    ))}
+  </div>
+) : (
+  <span className="text-xs text-red-400 italic">No IPs found</span>
+)}
+
                   </div>
                 </div>
               </div>
