@@ -94,9 +94,11 @@ from pymongo import MongoClient, ASCENDING
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 import random
+import os
 
 # MongoDB connection
-client = MongoClient('mongodb://localhost:27017/')
+mongo_uri = "mongodb://localhost:27017/"
+client = MongoClient(mongo_uri)
 db = client['subdomain_scanner']
 users_collection = db['users']
 

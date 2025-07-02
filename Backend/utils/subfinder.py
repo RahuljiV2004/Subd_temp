@@ -3,182 +3,150 @@
 # import os
 # import json
 # import datetime
+# import uuid
+
+
+# def log(message, level="info"):
+#     return f"data: {json.dumps({ 'type': 'log', 'message': message, 'level': level, 'timestamp': datetime.datetime.utcnow().isoformat() })}\n\n"
+
+# def result(data):
+#     return f"data: {json.dumps(data)}\n\n"
 
 # def run_subfinder_dnsx_httpx_stream(domain, collection):
 #     base_dir = os.path.dirname(os.path.abspath(__file__))
 #     tools_dir = os.path.join(base_dir, '..', 'tools')
-
 #     suffix = ".exe" if os.name == "nt" else ""
 
-#     subfinder_path = os.path.join(tools_dir, f'subfinder{suffix}')
-#     dnsx_path = os.path.join(tools_dir, f'dnsx{suffix}')
-#     httpx_path = os.path.join(tools_dir, f'httpx{suffix}')
+#     subfinder = os.path.join(tools_dir, f"subfinder{suffix}")
+#     dnsx = os.path.join(tools_dir, f"dnsx{suffix}")
+#     httpx = os.path.join(tools_dir, f"httpx{suffix}")
+#     nuclei = os.path.join(tools_dir, f"nuclei{suffix}")
 
-#     yield log(f"🚀 Starting Subfinder + DNSx + HTTPx scan for: {domain}")
-#     print(f"[+] Using: Subfinder={subfinder_path} DNSx={dnsx_path} HTTPx={httpx_path}")
+#     scan_id = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S") + "_" + str(uuid.uuid4())
+#     yield log(f"\U0001F680 Starting subdomain scan session: {scan_id} for {domain}")
 
 #     try:
-#         # ✅ Clear previous data
-#         collection.delete_many({})
-#         yield log(f"🗑️ Cleared previous records in database.")
-
-#         # ✅ Run Subfinder
-#         subfinder_proc = subprocess.run(
-#             [subfinder_path, "-d", domain, "-silent"],
+#         proc = subprocess.run(
+#             [subfinder, "-d", domain, "-silent"],
 #             stdout=subprocess.PIPE,
 #             stderr=subprocess.PIPE,
 #             text=True,
 #             shell=True
 #         )
 
-#         if subfinder_proc.returncode != 0:
-#             msg = f"❌ Subfinder failed: {subfinder_proc.stderr}"
-#             print(msg)
-#             yield log(msg, level="error")
+#         if proc.returncode != 0:
+#             yield log(f"❌ Subfinder failed: {proc.stderr}", "error")
 #             return
 
-#         subfinder_domains = list(set(subfinder_proc.stdout.strip().splitlines()))
-#         yield log(f"✅ Subfinder found {len(subfinder_domains)} domains.")
+#         subdomains = list(set(proc.stdout.strip().splitlines()))
+#         yield log(f"✅ Subfinder found {len(subdomains)} subdomains.")
 
-#         if not subfinder_domains:
-#             yield log("⚠️ No domains found by Subfinder.", level="warn")
+#         if not subdomains:
+#             yield log("⚠️ No subdomains found.", "warn")
 #             return
 
-#         # ✅ Run DNSx
-#         dnsx_proc = subprocess.run(
-#             [dnsx_path, "-silent", "-json"],
-#             input="\n".join(subfinder_domains),
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             text=True,
-#             shell=True
-#         )
-
-#         if dnsx_proc.returncode != 0:
-#             msg = f"❌ DNSx failed: {dnsx_proc.stderr}"
-#             print(msg)
-#             yield log(msg, level="error")
-#             return
-
-#         dnsx_lines = dnsx_proc.stdout.strip().splitlines()
-#         dnsx_data = {}
-#         for idx, line in enumerate(dnsx_lines, 1):
-#             try:
-#                 entry = json.loads(line)
-#                 host = entry.get("host") or entry.get("name")
-#                 if host:
-#                     dnsx_data[host] = entry
-#                     yield log(f"✅ DNSx [{idx}/{len(dnsx_lines)}]: {host}")
-#             except Exception as e:
-#                 print(f"[!] DNSx parse error: {e}")
-
-#         yield log(f"✅ DNSx validated {len(dnsx_data)} hosts.")
-
-#         if not dnsx_data:
-#             yield log("⚠️ No valid hosts after DNSx.", level="warn")
-#             return
-
-#         # ✅ Run HTTPx (binary mode)
-#         valid_hosts = list(dnsx_data.keys())
-#         httpx_proc = subprocess.run(
-#             [httpx_path, "-silent", "-json", "-tls-probe"],
-#             input="\n".join(valid_hosts).encode('utf-8'),
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             text=False,
-#             shell=True
-#         )
-
-#         if httpx_proc.returncode != 0:
-#             msg = f"❌ HTTPx failed: {httpx_proc.stderr.decode('utf-8', errors='ignore')}"
-#             print(msg)
-#             yield log(msg, level="error")
-#             return
-
-#         httpx_raw = httpx_proc.stdout.splitlines()
-#         httpx_data = {}
-#         for idx, line in enumerate(httpx_raw, 1):
-#             try:
-#                 decoded = line.decode('utf-8', errors='ignore')
-#                 entry = json.loads(decoded)
-#                 host = entry.get("input") or entry.get("host")
-#                 if host:
-#                     httpx_data[host] = entry
-#                     yield log(f"✅ HTTPx [{idx}/{len(httpx_raw)}]: {host}")
-#             except Exception as e:
-#                 print(f"[!] HTTPx parse error: {e}")
-
-#         yield log(f"✅ HTTPx processed {len(httpx_data)} hosts.")
-
-#         # ✅ Store + yield each result
-#         total_to_store = len(dnsx_data)
-#         stored_count = 0
-
-#         for i, dom in enumerate(sorted(dnsx_data.keys()), 1):
+#         for i, sub in enumerate(subdomains, 1):
 #             row = {
-#                 "subdomain": dom,
-#                 "subfinder_found": dom in subfinder_domains,
+#                 "scan_id": scan_id,
+#                 "subdomain": sub,
+#                 "subfinder_found": True,
+#                 "domain": domain,
 #                 "scanned_at": datetime.datetime.utcnow().isoformat()
 #             }
 
-#             dnsx_entry = dnsx_data.get(dom)
-#             if dnsx_entry:
-#                 row.update({f"dnsx_{k}": v for k, v in dnsx_entry.items()})
-#                 row.setdefault("dnsx_a", [])
+#             dnsx_proc = subprocess.run(
+#                 [dnsx, "-silent", "-json"],
+#                 input=sub,
+#                 stdout=subprocess.PIPE,
+#                 stderr=subprocess.PIPE,
+#                 text=True,
+#                 shell=True
+#             )
 
-#             httpx_entry = httpx_data.get(dom)
-#             if httpx_entry:
-#                 for k, v in httpx_entry.items():
-#                     if k == "tls" and isinstance(v, dict):
-#                         row.update({f"httpx_tls_{subk}": subv for subk, subv in v.items()})
-#                     elif k != "tls":
-#                         row[f"httpx_{k}"] = v
-#                 row.setdefault("httpx_a", [])
+#             if dnsx_proc.returncode == 0 and dnsx_proc.stdout.strip():
+#                 try:
+#                     dnsx_entry = json.loads(dnsx_proc.stdout.strip())
+#                     row.update({f"dnsx_{k}": v for k, v in dnsx_entry.items()})
+#                     yield log(f"✅ [{i}/{len(subdomains)}] DNSx: {sub}")
+#                 except Exception as e:
+#                     yield log(f"⚠️ [{i}/{len(subdomains)}] DNSx parse error for {sub}: {str(e)}", "warn")
+#                     continue
+#             else:
+#                 yield log(f"❌ [{i}/{len(subdomains)}] DNSx failed or no result for {sub}", "warn")
+#                 collection.insert_one(row)
+#                 row_to_send = dict(row)
+#                 row_to_send.pop("_id", None)
+#                 yield result(row_to_send)
+#                 continue
 
-#             # Store to DB
-#             collection.update_one({"subdomain": dom}, {"$set": row}, upsert=True)
-#             stored_count += 1
+#             httpx_proc = subprocess.run(
+#                 [httpx, "-silent", "-json", "-tls-probe"],
+#                 input=sub.encode(),
+#                 stdout=subprocess.PIPE,
+#                 stderr=subprocess.PIPE,
+#                 text=False,
+#                 shell=True
+#             )
 
-#             # ✅ 1) Log message
-#             yield log(f"✅ Stored [{i}/{total_to_store}]: {dom}")
+#             if httpx_proc.returncode == 0 and httpx_proc.stdout.strip():
+#                 try:
+#                     decoded = httpx_proc.stdout.decode(errors='ignore').strip()
+#                     httpx_entry = json.loads(decoded)
+#                     for k, v in httpx_entry.items():
+#                         if k == "tls" and isinstance(v, dict):
+#                             for subk, subv in v.items():
+#                                 row[f"httpx_tls_{subk}"] = subv
+#                         elif k != "tls":
+#                             row[f"httpx_{k}"] = v
+#                     yield log(f"✅ [{i}/{len(subdomains)}] HTTPx: {sub}")
+#                 except Exception as e:
+#                     yield log(f"⚠️ [{i}/{len(subdomains)}] HTTPx parse error for {sub}: {str(e)}", "warn")
 
-#             # ✅ 2) Actual result for card
-#             yield result(row)
+#             if "httpx_url" in row:
+#                 try:
+#                     nuclei_proc = subprocess.run(
+#                         [nuclei, "-u", row["httpx_url"], "-json", "-silent"],
+#                         stdout=subprocess.PIPE,
+#                         stderr=subprocess.PIPE,
+#                         text=True,
+#                         shell=True
+#                     )
 
-#         yield log(f"🏁 Finished. Total stored: {stored_count}", level="success")
+#                     if nuclei_proc.returncode == 0 and nuclei_proc.stdout.strip():
+#                         nuclei_results = [json.loads(line) for line in nuclei_proc.stdout.strip().splitlines()]
+#                         row["vulnerabilities"] = nuclei_results
+#                         yield log(f"⚠️ [{i}/{len(subdomains)}] Nuclei found {len(nuclei_results)} issues on {row['httpx_url']}")
+#                     else:
+#                         yield log(f"✅ [{i}/{len(subdomains)}] No Nuclei issues found on {row['httpx_url']}")
+#                 except Exception as e:
+#                     yield log(f"❌ Nuclei error on {row['httpx_url']}: {str(e)}", "error")
+
+#             inserted = collection.insert_one(row)
+#             row_to_send = dict(row)
+#             row_to_send.pop("_id", None)
+#             yield log(f"✅ [{i}/{len(subdomains)}] Stored: {sub}")
+#             yield result(row_to_send)
+
+#         yield log(f"🏁 Done. Processed {len(subdomains)} subdomains. Scan ID: {scan_id}", "success")
 
 #     except Exception as e:
-#         yield log(f"❌ Pipeline failed: {str(e)}", level="error")
-
-
-# # def log(message, level="info"):
-# #     """Format log for SSE"""
-# #     return f"data: {json.dumps({ 'type': 'log', 'message': message, 'level': level, 'timestamp': datetime.datetime.utcnow().isoformat() })}\n\n"
-
-# # def result(data):
-# #     """Format result for SSE"""
-# #     return f"data: {json.dumps(data)}\n\n"
-# def log(message, level="info"):
-#     """Format log for SSE"""
-#     return f"data: {json.dumps({ 'type': 'log', 'message': message, 'level': level, 'timestamp': datetime.datetime.utcnow().isoformat() })}\n\n"
-
-# def result(data):
-#     """Format result for SSE"""
-#     return f"data: {json.dumps(data)}\n\n"
+#         yield log(f"❌ Pipeline error: {str(e)}", "error")
 import subprocess
 import os
 import json
 import datetime
+import uuid
+import pytz  # ✅ For timezone support in Python 3.8
 
+# Constant for IST
+IST = pytz.timezone("Asia/Kolkata")
 
 def log(message, level="info"):
-    """Format log for SSE"""
-    return f"data: {json.dumps({ 'type': 'log', 'message': message, 'level': level, 'timestamp': datetime.datetime.utcnow().isoformat() })}\n\n"
+    ist_time = datetime.datetime.now(IST).isoformat()
+    return f"data: {json.dumps({ 'type': 'log', 'message': message, 'level': level, 'timestamp': ist_time })}\n\n"
 
 def result(data):
-    """Format result for SSE"""
     return f"data: {json.dumps(data)}\n\n"
-
 
 def run_subfinder_dnsx_httpx_stream(domain, collection):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -188,14 +156,12 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
     subfinder = os.path.join(tools_dir, f"subfinder{suffix}")
     dnsx = os.path.join(tools_dir, f"dnsx{suffix}")
     httpx = os.path.join(tools_dir, f"httpx{suffix}")
+    nuclei = os.path.join(tools_dir, f"nuclei{suffix}")
 
-    yield log(f"🚀 Starting per-subdomain pipeline for: {domain}")
+    scan_id = datetime.datetime.now(IST).strftime("%Y%m%d%H%M%S") + "_" + str(uuid.uuid4())
+    yield log(f"\U0001F680 Starting subdomain scan session: {scan_id} for {domain}")
 
     try:
-        # ✅ 1) Subfinder: get all first
-        collection.delete_many({})
-        yield log("🗑️ Cleared previous data.")
-
         proc = subprocess.run(
             [subfinder, "-d", domain, "-silent"],
             stdout=subprocess.PIPE,
@@ -215,15 +181,15 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
             yield log("⚠️ No subdomains found.", "warn")
             return
 
-        # ✅ 2) For each subdomain: DNSx -> HTTPx -> store
         for i, sub in enumerate(subdomains, 1):
             row = {
+                "scan_id": scan_id,
                 "subdomain": sub,
                 "subfinder_found": True,
-                "scanned_at": datetime.datetime.utcnow().isoformat()
+                "domain": domain,
+                "scanned_at": datetime.datetime.now(IST).isoformat()
             }
 
-            # DNSx for single subdomain
             dnsx_proc = subprocess.run(
                 [dnsx, "-silent", "-json"],
                 input=sub,
@@ -243,12 +209,12 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
                     continue
             else:
                 yield log(f"❌ [{i}/{len(subdomains)}] DNSx failed or no result for {sub}", "warn")
-                # skip HTTPx for non-resolving subdomain
-                collection.update_one({"subdomain": sub}, {"$set": row}, upsert=True)
-                yield result(row)
+                collection.insert_one(row)
+                row_to_send = dict(row)
+                row_to_send.pop("_id", None)
+                yield result(row_to_send)
                 continue
 
-            # HTTPx for single subdomain
             httpx_proc = subprocess.run(
                 [httpx, "-silent", "-json", "-tls-probe"],
                 input=sub.encode(),
@@ -272,12 +238,32 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
                 except Exception as e:
                     yield log(f"⚠️ [{i}/{len(subdomains)}] HTTPx parse error for {sub}: {str(e)}", "warn")
 
-            # Store merged data
-            collection.update_one({"subdomain": sub}, {"$set": row}, upsert=True)
-            yield log(f"✅ [{i}/{len(subdomains)}] Stored: {sub}")
-            yield result(row)
+            if "httpx_url" in row:
+                try:
+                    nuclei_proc = subprocess.run(
+                        [nuclei, "-u", row["httpx_url"], "-json", "-silent"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        shell=True
+                    )
 
-        yield log(f"🏁 Done. Processed {len(subdomains)} subdomains.", "success")
+                    if nuclei_proc.returncode == 0 and nuclei_proc.stdout.strip():
+                        nuclei_results = [json.loads(line) for line in nuclei_proc.stdout.strip().splitlines()]
+                        row["vulnerabilities"] = nuclei_results
+                        yield log(f"⚠️ [{i}/{len(subdomains)}] Nuclei found {len(nuclei_results)} issues on {row['httpx_url']}")
+                    else:
+                        yield log(f"✅ [{i}/{len(subdomains)}] No Nuclei issues found on {row['httpx_url']}")
+                except Exception as e:
+                    yield log(f"❌ Nuclei error on {row['httpx_url']}: {str(e)}", "error")
+
+            collection.insert_one(row)
+            row_to_send = dict(row)
+            row_to_send.pop("_id", None)
+            yield log(f"✅ [{i}/{len(subdomains)}] Stored: {sub}")
+            yield result(row_to_send)
+
+        yield log(f"🏁 Done. Processed {len(subdomains)} subdomains. Scan ID: {scan_id}", "success")
 
     except Exception as e:
         yield log(f"❌ Pipeline error: {str(e)}", "error")
