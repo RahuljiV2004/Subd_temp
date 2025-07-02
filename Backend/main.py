@@ -24,6 +24,7 @@ from models import User
 from dotenv import load_dotenv
 from utils.subfinder_runner import run_subfinder_and_enhance_streaming  # Updated import
 load_dotenv()
+from bson.son import SON
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -33,8 +34,8 @@ from flask_mail import Mail, Message
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = ''
-app.config['MAIL_PASSWORD'] = ''
+app.config['MAIL_USERNAME'] = 'rahuljiv2004@gmail.com'
+app.config['MAIL_PASSWORD'] = 'sdjv yxmp vxcv dkfu'
 mail = Mail(app)
 
 # JWT config
@@ -47,7 +48,9 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # You can enable later if needed
 jwt = JWTManager(app)
 
 # MongoDB connection
-client = MongoClient('mongodb://localhost:27017/')
+# client = MongoClient("MONGO_URI",'mongodb://localhost:27017/')
+mongo_uri =  "mongodb://localhost:27017/"
+client = MongoClient(mongo_uri)
 db = client['subdomain_scanner']
 collection = db['scan_results']
 collection_subfinder=db['scan_results_subfinder']
@@ -58,6 +61,33 @@ SUBFINDER_PATH = os.path.join(tools_dir, 'subfinder.exe')
 @app.route("/")
 def index():
     return render_template("index.html")
+# @app.route("/resultssubfinder")
+# @jwt_required()
+# def resultssubfinder():
+#     user_id = get_jwt_identity()
+#     user = User.find_by_id(user_id)
+#     if not user:
+#         return jsonify({"error": "Unauthorized"}), 401
+
+#     allowed = user.organization
+#     print(f"Allowed org: {allowed}")
+
+#     stored = collection_subfinder.find_one({}, {"_id": 0})
+#     if not stored:
+#         return jsonify({"error": "No stored results"}), 404
+
+#     stored_domain = stored.get("subdomain", "")
+#     print(f"Stored domain: {stored_domain}")
+
+#     if stored_domain.endswith(allowed):
+#         # ✅ Allowed → return ALL stored results for this scan
+#         return jsonify(list(collection_subfinder.find({}, {"_id": 0})))
+#     else:
+#         # ❌ Domain doesn't match → block
+#         return jsonify({"error": "Unauthorized"}), 403
+
+from bson.son import SON
+
 @app.route("/resultssubfinder")
 @jwt_required()
 def resultssubfinder():
@@ -69,19 +99,304 @@ def resultssubfinder():
     allowed = user.organization
     print(f"Allowed org: {allowed}")
 
-    stored = collection_subfinder.find_one({}, {"_id": 0})
-    if not stored:
-        return jsonify({"error": "No stored results"}), 404
+    # 1. Find latest scan_id for this org
+    match_stage = {
+        "$match": {
+            "subdomain": {"$regex": f"{allowed}$"},
+            "scan_id": {"$exists": True}
+        }
+    }
 
-    stored_domain = stored.get("subdomain", "")
-    print(f"Stored domain: {stored_domain}")
+    sort_stage = {
+        "$sort": SON([("scanned_at", -1)])  # Sort by time
+    }
 
-    if stored_domain.endswith(allowed):
-        # ✅ Allowed → return ALL stored results for this scan
-        return jsonify(list(collection_subfinder.find({}, {"_id": 0})))
+    group_stage = {
+        "$group": {
+            "_id": "$scan_id",
+            "latest_time": {"$first": "$scanned_at"}
+        }
+    }
+
+    latest_scan = list(collection_subfinder.aggregate([
+        match_stage, sort_stage, group_stage,
+        {"$sort": {"latest_time": -1}},
+        {"$limit": 1}
+    ]))
+
+    if not latest_scan:
+        return jsonify({"error": "No scan data found"}), 404
+
+    latest_scan_id = latest_scan[0]["_id"]
+    print(f"Latest scan_id: {latest_scan_id}")
+
+    # 2. Fetch all subdomains from that scan
+    subdomains = list(collection_subfinder.find(
+        {
+            "scan_id": latest_scan_id,
+            "subdomain": {"$regex": f"{allowed}$"}
+        },
+        {"_id": 0}
+    ))
+
+    return jsonify(subdomains)
+
+
+
+@app.route("/resultssubfinderchart")
+@jwt_required()
+def resultssubfinderchart():
+    user_id = get_jwt_identity()
+    user = User.find_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    allowed = user.organization
+    scan_id = request.args.get("scan_id")
+
+    if scan_id:
+        # Fetch specific scan_id
+        subdomains = list(collection_subfinder.find(
+            {
+                "scan_id": scan_id,
+                "subdomain": {"$regex": f"{allowed}$"}
+            },
+            {"_id": 0}
+        ))
+
+        if not subdomains:
+            return jsonify({"error": "No data found for this scan_id"}), 404
+
+        return jsonify(subdomains)
     else:
-        # ❌ Domain doesn't match → block
-        return jsonify({"error": "Unauthorized"}), 403
+        # Fetch latest scan_id (default behavior)
+        match_stage = {
+            "$match": {
+                "subdomain": {"$regex": f"{allowed}$"},
+                "scan_id": {"$exists": True}
+            }
+        }
+
+        sort_stage = {
+            "$sort": SON([("scanned_at", -1)])
+        }
+
+        group_stage = {
+            "$group": {
+                "_id": "$scan_id",
+                "latest_time": {"$first": "$scanned_at"}
+            }
+        }
+
+        latest_scan = list(collection_subfinder.aggregate([
+            match_stage, sort_stage, group_stage,
+            {"$sort": {"latest_time": -1}},
+            {"$limit": 1}
+        ]))
+
+        if not latest_scan:
+            return jsonify({"error": "No scan data found"}), 404
+
+        latest_scan_id = latest_scan[0]["_id"]
+
+        subdomains = list(collection_subfinder.find(
+            {
+                "scan_id": latest_scan_id,
+                "subdomain": {"$regex": f"{allowed}$"}
+            },
+            {"_id": 0}
+        ))
+
+        return jsonify(subdomains)
+
+# @app.route("/scan-trends")
+# @jwt_required()
+# def scan_trends():
+#     user_id = get_jwt_identity()
+#     user = User.find_by_id(user_id)
+#     if not user:
+#         return jsonify({"error": "Unauthorized"}), 401
+
+#     allowed = user.organization
+
+#     pipeline = [
+        
+#     {
+#         "$match": {
+#             "subdomain": {"$regex": f"{allowed}$"}
+#         }
+#     },
+#     {
+#         "$addFields": {
+#             "scanned_at_date": {
+#                 "$toDate": "$scanned_at"
+#             }
+#         }
+#     },
+#     {
+#         "$group": {
+#             "_id": {
+#                 "$dateToString": {
+#                     "format": "%Y-%m-%d",
+#                     "date": "$scanned_at_date"
+#                 }
+#             },
+#             "subdomains": {"$sum": 1},
+#             "vulnerabilities": {
+#                 "$sum": {
+#                     "$cond": [
+#                         { "$gt": [ { "$size": { "$ifNull": ["$vulnerabilities", []] } }, 0 ] },
+#                         1,
+#                         0
+#                     ]
+#                 }
+#             }
+#         }
+#     },
+#     {"$sort": SON([("_id", 1)])}
+
+
+#     ]
+
+#     results = list(collection_subfinder.aggregate(pipeline))
+#     return jsonify(results)
+# @app.route("/scan-trends")
+# @jwt_required()
+# def scan_trends():
+#     user_id = get_jwt_identity()
+#     user = User.find_by_id(user_id)
+#     if not user:
+#         return jsonify({"error": "Unauthorized"}), 401
+
+#     allowed = user.organization
+
+#     pipeline = [
+#         {
+#             "$match": {
+#                 "subdomain": {"$regex": f"{allowed}$"},
+#                 "scan_id": {"$exists": True}
+#             }
+#         },
+#         {
+#             "$addFields": {
+#                 "scanned_at_date": { "$toDate": "$scanned_at" }
+#             }
+#         },
+#         {
+#             "$group": {
+#                 "_id": "$scan_id",
+#                 "scan_date": { "$first": {
+#                     "$dateToString": {
+#                         "format": "%Y-%m-%d %H:%M:%S",
+#                         "date": "$scanned_at_date"
+#                     }
+#                 }},
+#                 "subdomains": { "$sum": 1 },
+#                 "vulnerabilities": {
+#                     "$sum": {
+#                         "$cond": [
+#                             { "$gt": [ { "$size": { "$ifNull": ["$vulnerabilities", []] } }, 0 ] },
+#                             1,
+#                             0
+#                         ]
+#                     }
+#                 }
+#             }
+#         },
+#         {
+#             "$sort": { "scan_date": -1 }
+#         }
+#     ]
+
+#     results = list(collection_subfinder.aggregate(pipeline))
+#     if not results:
+#         return jsonify({"error": "No scan trends found"}), 404
+
+#     return jsonify(results)
+
+@app.route("/scan-trends")
+@jwt_required()
+def scan_trends():
+    user_id = get_jwt_identity()
+    user = User.find_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    allowed = user.organization
+
+    pipeline = [
+        {
+            "$match": {
+                "subdomain": {"$regex": f"{allowed}$"},
+                "scan_id": {"$exists": True}
+            }
+        },
+        {
+            "$addFields": {
+                "scanned_at_date": { "$toDate": "$scanned_at" }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$scan_id",
+                "scanned_at_clean": {
+                    "$first": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%dT%H:%M:%S",
+                            "date": "$scanned_at_date",
+                            "timezone": "Asia/Kolkata"  
+                        }
+                    }
+                },
+                "subdomains": { "$sum": 1 },
+                "vulnerabilities": {
+                    "$sum": {
+                        "$cond": [
+                            { "$gt": [{ "$size": { "$ifNull": ["$vulnerabilities", []] } }, 0] },
+                            1,
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "$sort": { "scanned_at_clean": 1 }
+        }
+    ]
+
+    results = list(collection_subfinder.aggregate(pipeline))
+    if not results:
+        return jsonify({"error": "No scan trends found"}), 404
+
+    return jsonify(results)
+
+
+
+# @app.route("/results")
+# @jwt_required()
+# def results():
+#     user_id = get_jwt_identity()
+#     user = User.find_by_id(user_id)
+#     if not user:
+#         return jsonify({"error": "Unauthorized"}), 401
+
+#     allowed = user.organization
+#     print(f"Allowed org: {allowed}")
+
+#     # 🔍 Fetch only entries that match the user's organization
+#     query = {
+#         "domain": {"$regex": f"{allowed}$"}
+#     }
+
+#     results = list(collection.find(query, {"_id": 0}))
+#     if not results:
+#         return jsonify({"error": "No stored results"}), 404
+
+#     print(f"Returning {len(results)} results for org: {allowed}")
+#     return jsonify(results)
+
+from bson import ObjectId
 
 @app.route("/results")
 @jwt_required()
@@ -92,56 +407,69 @@ def results():
         return jsonify({"error": "Unauthorized"}), 401
 
     allowed = user.organization
-    print(f"Allowed org: {allowed}")
 
-    stored = collection.find_one({}, {"_id": 0})
-    if not stored:
+    pipeline = [
+        {
+            "$match": {
+                "$or": [
+                    {"domain": {"$regex": f"{allowed}$"}},
+                    {"subdomain": {"$regex": f"{allowed}$"}}
+                ]
+            }
+        },
+        {"$addFields": {"scanned_at_date": {"$toDate": "$scanned_at"}}},
+        {"$sort": {"scanned_at_date": -1}},
+        {
+            "$group": {
+                "_id": {"$ifNull": ["$subdomain", "$domain"]},
+                "latest": {"$first": "$$ROOT"}
+            }
+        },
+        {"$replaceRoot": {"newRoot": "$latest"}},
+        {"$sort": {"domain": 1}},
+        {"$project": {"_id": 0}}  # 👈 ensures ObjectId is removed
+    ]
+
+    results = list(collection.aggregate(pipeline))
+    if not results:
         return jsonify({"error": "No stored results"}), 404
 
-    stored_domain = stored.get("domain", "")
-    print(f"Stored domain: {stored_domain}")
-
-    if stored_domain.endswith(allowed):
-        # ✅ Allowed → return ALL stored results for this scan
-        return jsonify(list(collection.find({}, {"_id": 0})))
-    else:
-        # ❌ Domain doesn't match → block
-        return jsonify({"error": "Unauthorized"}), 403
+    return jsonify(results)
 
 
 
 
+@app.route("/api/assets", methods=["POST"])
+@jwt_required()
+def save_assets():
+    user_id = get_jwt_identity()
+    user = User.find_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
 
-# @app.route('/auth/register', methods=['POST'])
-# def register():
-#     data = request.get_json()
-#     email = data.get('email')
-#     password = data.get('password')
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
 
-#     if not email or not password:
-#         return jsonify({'error': 'Email and password are required'}), 400
+    domains = data.get("domains", [])
+    ips = data.get("ips", [])
+    endpoints = data.get("endpoints", [])
+    shodan_key = data.get("shodanKey", "")
+    fofa_key = data.get("fofaKey", "")
 
-#     existing_user = User.find_by_email(email)
-#     if existing_user:
-#         print("adsjsdio")
+    asset_doc = {
+        "org": user.organization,
+        "domains": domains,
+        "ips": ips,
+        "endpoints": endpoints,
+        "shodan_key": shodan_key,
+        "fofa_key": fofa_key,
+        "created_at": datetime.utcnow()
+    }
 
-#         return jsonify({'error': 'Email already registered'}), 400
+    db.assets.insert_one(asset_doc)
+    return jsonify({"message": "Assets saved successfully"}), 201
 
-#     user = User(email=email, password=password)
-#     user.save()
-
-#     # access_token = create_access_token(identity=str(user._id))
-#     access_token = create_access_token(
-#     identity=str(user._id),
-#     additional_claims={"jti": str(uuid4())}
-# )
-#     resp = jsonify({
-#         'message': 'User registered successfully',
-#         'user': user.to_dict()
-#     })
-#     # ✅ Store token in cookie
-#     set_access_cookies(resp, access_token)
-#     return resp, 201
 
 @app.route('/auth/register', methods=['POST'])
 def register():
@@ -186,31 +514,6 @@ def register():
     })
     return resp, 201
 
-# @app.route('/auth/login', methods=['POST'])
-# def login():
-#     data = request.get_json()
-#     email = data.get('email')
-#     password = data.get('password')
-
-#     if not email or not password:
-#         return jsonify({'error': 'Email and password are required'}), 400
-
-#     user = User.find_by_email(email)
-#     if not user or not user.check_password(password):
-#         return jsonify({'error': 'Invalid email or password'}), 401
-
-#     user.last_login = datetime.utcnow()
-#     user.update()
-
-#     access_token = create_access_token(identity=str(user._id))
-#     print(access_token)
-#     resp = jsonify({
-#         'message': 'Login successful',
-#         'user': user.to_dict()
-#     })
-#     # ✅ Store token in cookie
-#     set_access_cookies(resp, access_token)
-#     return resp, 200
 
 @app.route('/auth/login', methods=['POST'])
 def login():
@@ -240,34 +543,7 @@ def login():
     set_access_cookies(resp, access_token)
     return resp, 200
 
-# @app.route('/auth/verify-otp', methods=['POST'])
-# def verify_otp():
-#     data = request.get_json()
-#     email = data.get('email')
-#     otp = data.get('otp')
 
-#     if not email or not otp:
-#         return jsonify({'error': 'Email and OTP are required'}), 400
-
-#     user = User.find_by_email(email)
-#     if not user:
-#         return jsonify({'error': 'User not found'}), 404
-
-#     success, message = user.verify_otp(otp)
-#     if not success:
-#         return jsonify({'error': message}), 400
-    
-#     user.last_login = datetime.utcnow()
-#     user.update()
-
-#     access_token = create_access_token(identity=str(user._id))
-#     resp = jsonify({
-#         'message': 'Login successful',
-#         'user': user.to_dict()
-#     })
-#     set_access_cookies(resp, access_token)
-
-#     return jsonify({'message': 'Email verified successfully! You can now log in.'}), 200
 @app.route('/auth/verify-otp', methods=['POST'])
 def verify_otp():
     data = request.get_json()
