@@ -157,10 +157,14 @@ useEffect(() => {
   fetchTrends();
 }, []);
 
-const sortedTrendData = [...trendData].sort(
-  (a, b) =>
-    new Date(a.scanned_at_clean).getTime() - new Date(b.scanned_at_clean).getTime()
-);
+const sortedTrendData = Array.isArray(trendData)
+  ? [...trendData].sort(
+      (a, b) =>
+        new Date(a.scanned_at_clean).getTime() -
+        new Date(b.scanned_at_clean).getTime()
+    )
+  : [];
+
 // 👇 Group by week
 const weeklyTrendData = Object.values(
   sortedTrendData.reduce((acc, curr) => {
