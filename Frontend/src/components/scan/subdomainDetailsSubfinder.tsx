@@ -743,6 +743,111 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
 
   </div>
 </div>
+<div className="modal-section">
+  <br />
+  <h3 className="modal-section-title text-green-500 text-xl font-bold">
+    &gt;&gt; Identified CVEs
+  </h3>
+
+  <div className="modal-section-content">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="modal-grid-item md:col-span-2">
+        <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">CVEs</div>
+        <div className="modal-grid-value flex flex-wrap gap-2 relative">
+          {Array.isArray(subdomain.cohere_cves) && subdomain.cohere_cves.length > 0 ? (
+            subdomain.cohere_cves.map((cve, idx) => {
+              const severity = cve.severity?.toLowerCase();
+              let borderColor = "border-gray-500";
+              let textColor = "text-gray-300";
+              let bgColor = "bg-gray-500/10";
+
+              if (severity === "high") {
+                borderColor = "border-red-500";
+                textColor = "text-red-300";
+                bgColor = "bg-red-500/10";
+              } else if (severity === "medium") {
+                borderColor = "border-yellow-500";
+                textColor = "text-yellow-300";
+                bgColor = "bg-yellow-500/10";
+              } else if (severity === "low") {
+                borderColor = "border-green-500";
+                textColor = "text-green-300";
+                bgColor = "bg-green-500/10";
+              }
+
+              return (
+                <div key={idx} className="relative group">
+  <a
+    href={`https://nvd.nist.gov/vuln/detail/${cve.cve}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className={`px-3 py-1 ${bgColor} ${textColor} ${borderColor} border rounded-full text-xs cursor-pointer hover:underline`}
+  >
+    {cve.cve}
+  </a>
+  <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 bg-zinc-800 text-zinc-100 text-xs p-3 rounded-md shadow-lg transition-all">
+    {cve.desc}
+  </div>
+</div>
+
+              );
+            })
+          ) : (
+            <span className="text-gray-400 text-sm">N/A</span>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div className="modal-section">
+  <h3 className="modal-section-title text-green-500 text-xl font-bold">
+    &gt;&gt; Risk Scoring
+  </h3>
+  <div className="modal-section-content">
+    <div className="bg-black text-green-400 font-mono text-sm p-4 rounded-xl space-y-3">
+
+      {/* Risk Score Line */}
+      <div className="flex items-center flex-wrap gap-2">
+        <span className="text-green-500">*</span>
+        <span>Risk Score:</span>
+        <span className={`px-2 py-0.5 rounded text-black font-bold text-xs
+          ${subdomain.risk_score >= 8 ? 'bg-red-500' :
+            subdomain.risk_score >= 5 ? 'bg-yellow-400' :
+            'bg-green-400'}`}>
+          {subdomain.risk_score ?? "N/A"}
+        </span>
+      </div>
+
+      {/* Reason */}
+      <div className="flex items-start gap-2">
+        <span className="text-green-500">*</span>
+        <span>
+          Reason: <span className="text-cyan-300">{subdomain.risk_reason || "Not provided"}</span>
+        </span>
+      </div>
+
+      {/* Suggestions */}
+      <div className="flex items-start gap-2">
+        <span className="text-green-500">*</span>
+        <div>
+          Suggestions:
+          <ul className="list-disc list-inside ml-4 mt-1 text-pink-300 space-y-1">
+            {subdomain.risk_suggestions?.length > 0 ? (
+              subdomain.risk_suggestions.map((tip, i) => (
+                <li key={i}>{tip}</li>
+              ))
+            ) : (
+              <li>No suggestions available.</li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 </div>
 
