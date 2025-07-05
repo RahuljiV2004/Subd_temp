@@ -13,6 +13,7 @@ from flask_jwt_extended import (
 from utils.subfinder import run_subfinder_dnsx_httpx_stream
 from datetime import datetime, timedelta
 from zap import run_single_zap_scan
+from llm.cohere_cve_lookup import generate_scan_comparison_report
 import os
 import time
 from utils.subfinder_enrich import run_subfinder_and_enrich  # New helper import
@@ -61,30 +62,7 @@ SUBFINDER_PATH = os.path.join(tools_dir, 'subfinder.exe')
 @app.route("/")
 def index():
     return render_template("index.html")
-# @app.route("/resultssubfinder")
-# @jwt_required()
-# def resultssubfinder():
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({"error": "Unauthorized"}), 401
 
-#     allowed = user.organization
-#     print(f"Allowed org: {allowed}")
-
-#     stored = collection_subfinder.find_one({}, {"_id": 0})
-#     if not stored:
-#         return jsonify({"error": "No stored results"}), 404
-
-#     stored_domain = stored.get("subdomain", "")
-#     print(f"Stored domain: {stored_domain}")
-
-#     if stored_domain.endswith(allowed):
-#         # ✅ Allowed → return ALL stored results for this scan
-#         return jsonify(list(collection_subfinder.find({}, {"_id": 0})))
-#     else:
-#         # ❌ Domain doesn't match → block
-#         return jsonify({"error": "Unauthorized"}), 403
 
 from bson.son import SON
 
@@ -209,110 +187,7 @@ def resultssubfinderchart():
 
         return jsonify(subdomains)
 
-# @app.route("/scan-trends")
-# @jwt_required()
-# def scan_trends():
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({"error": "Unauthorized"}), 401
 
-#     allowed = user.organization
-
-#     pipeline = [
-        
-#     {
-#         "$match": {
-#             "subdomain": {"$regex": f"{allowed}$"}
-#         }
-#     },
-#     {
-#         "$addFields": {
-#             "scanned_at_date": {
-#                 "$toDate": "$scanned_at"
-#             }
-#         }
-#     },
-#     {
-#         "$group": {
-#             "_id": {
-#                 "$dateToString": {
-#                     "format": "%Y-%m-%d",
-#                     "date": "$scanned_at_date"
-#                 }
-#             },
-#             "subdomains": {"$sum": 1},
-#             "vulnerabilities": {
-#                 "$sum": {
-#                     "$cond": [
-#                         { "$gt": [ { "$size": { "$ifNull": ["$vulnerabilities", []] } }, 0 ] },
-#                         1,
-#                         0
-#                     ]
-#                 }
-#             }
-#         }
-#     },
-#     {"$sort": SON([("_id", 1)])}
-
-
-#     ]
-
-#     results = list(collection_subfinder.aggregate(pipeline))
-#     return jsonify(results)
-# @app.route("/scan-trends")
-# @jwt_required()
-# def scan_trends():
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({"error": "Unauthorized"}), 401
-
-#     allowed = user.organization
-
-#     pipeline = [
-#         {
-#             "$match": {
-#                 "subdomain": {"$regex": f"{allowed}$"},
-#                 "scan_id": {"$exists": True}
-#             }
-#         },
-#         {
-#             "$addFields": {
-#                 "scanned_at_date": { "$toDate": "$scanned_at" }
-#             }
-#         },
-#         {
-#             "$group": {
-#                 "_id": "$scan_id",
-#                 "scan_date": { "$first": {
-#                     "$dateToString": {
-#                         "format": "%Y-%m-%d %H:%M:%S",
-#                         "date": "$scanned_at_date"
-#                     }
-#                 }},
-#                 "subdomains": { "$sum": 1 },
-#                 "vulnerabilities": {
-#                     "$sum": {
-#                         "$cond": [
-#                             { "$gt": [ { "$size": { "$ifNull": ["$vulnerabilities", []] } }, 0 ] },
-#                             1,
-#                             0
-#                         ]
-#                     }
-#                 }
-#             }
-#         },
-#         {
-#             "$sort": { "scan_date": -1 }
-#         }
-#     ]
-
-#     results = list(collection_subfinder.aggregate(pipeline))
-#     if not results:
-#         return jsonify({"error": "No scan trends found"}), 404
-
-#     return jsonify(results)
 
 @app.route("/scan-trends")
 @jwt_required()
@@ -372,29 +247,96 @@ def scan_trends():
     return jsonify(results)
 
 
+@app.route("/scan-diff-analysis")
+@jwt_required()
+def scan_diff_analysis():
+    user_id = get_jwt_identity()
+    user = User.find_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
 
-# @app.route("/results")
-# @jwt_required()
-# def results():
-#     user_id = get_jwt_identity()
-#     user = User.find_by_id(user_id)
-#     if not user:
-#         return jsonify({"error": "Unauthorized"}), 401
+    allowed = user.organization
 
-#     allowed = user.organization
-#     print(f"Allowed org: {allowed}")
+    # Step 1: Get the latest two scans with aggregation similar to scan-trends
+    pipeline = [
+        {
+            "$match": {
+                "subdomain": {"$regex": f"{allowed}$"},
+                "scan_id": {"$exists": True}
+            }
+        },
+        {
+            "$addFields": {
+                "scanned_at_date": { "$toDate": "$scanned_at" }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$scan_id",
+                "scanned_at_clean": {
+                    "$first": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%dT%H:%M:%S",
+                            "date": "$scanned_at_date",
+                            "timezone": "Asia/Kolkata"
+                        }
+                    }
+                },
+                "latest_doc": { "$first": "$$ROOT" },  # keep full doc for LLM
+                "subdomains": { "$sum": 1 },
+                "vulnerabilities": {
+                    "$sum": {
+                        "$cond": [
+                            { "$gt": [{ "$size": { "$ifNull": ["$vulnerabilities", []] } }, 0] },
+                            1,
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "$sort": { "scanned_at_clean": -1 }
+        },
+        {
+            "$limit": 2
+        }
+    ]
 
-#     # 🔍 Fetch only entries that match the user's organization
-#     query = {
-#         "domain": {"$regex": f"{allowed}$"}
-#     }
+    grouped_scans = list(collection_subfinder.aggregate(pipeline))
+    if len(grouped_scans) < 2:
+        return jsonify({"error": "Not enough scans to analyze"}), 400
 
-#     results = list(collection.find(query, {"_id": 0}))
-#     if not results:
-#         return jsonify({"error": "No stored results"}), 404
+    latest_group = grouped_scans[0]
+    previous_group = grouped_scans[1]
 
-#     print(f"Returning {len(results)} results for org: {allowed}")
-#     return jsonify(results)
+    # Extract full docs for LLM
+    latest_scan = latest_group["latest_doc"]
+    previous_scan = previous_group["latest_doc"]
+
+    # Call Cohere LLM for comparison
+    try:
+        analysis = generate_scan_comparison_report(previous_scan, latest_scan, allowed)
+    except RuntimeError as e:
+        return jsonify({"error": "LLM analysis failed", "details": str(e)}), 500
+
+    return jsonify({
+        "latest_scan": {
+            "scan_id": latest_group["_id"],
+            "scanned_at_clean": latest_group["scanned_at_clean"],
+            "subdomains": latest_group["subdomains"],
+            "vulnerabilities": latest_group["vulnerabilities"]
+        },
+        "previous_scan": {
+            "scan_id": previous_group["_id"],
+            "scanned_at_clean": previous_group["scanned_at_clean"],
+            "subdomains": previous_group["subdomains"],
+            "vulnerabilities": previous_group["vulnerabilities"]
+        },
+        "analysis": analysis
+    })
+
+
 
 from bson import ObjectId
 
@@ -490,12 +432,7 @@ def register():
     # ✅ Generate OTP and save:
     otp = user.set_otp()
 
-    # # ✅ Send OTP email
-    # msg = Message('Verify your email',
-    #               sender='youremail@gmail.com',
-    #               recipients=[email])
-    # msg.body = f'Your OTP is: {otp}. It expires in 10 minutes.'
-    # mail.send(msg)
+ 
     msg = Message('Verify your email', 
               sender='youremail@gmail.com', 
               recipients=[email])
