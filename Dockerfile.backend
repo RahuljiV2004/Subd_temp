@@ -1,0 +1,23 @@
+# Dockerfile.backend
+
+FROM python:3.11-slim
+
+RUN apt update && apt install -y curl unzip git
+
+# (Optional: download subfinder or other tools here, or copy your local binaries if already in tools/)
+# Example:
+# RUN curl -LO https://github.com/projectdiscovery/subfinder/releases/latest/download/subfinder_linux_amd64.zip \
+#     && unzip subfinder_linux_amd64.zip -d /usr/local/bin \
+#     && chmod +x /usr/local/bin/subfinder_linux_amd64
+
+# Set working directory inside container
+WORKDIR /app
+
+# ✅ Fixed paths — copy contents of backend folder only
+COPY Backend/requirements.txt requirements.txt
+COPY Backend/ /app
+RUN pip uninstall -y bson
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "main.py"]
