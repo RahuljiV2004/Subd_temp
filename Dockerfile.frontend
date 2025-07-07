@@ -1,0 +1,17 @@
+FROM node:20
+
+WORKDIR /app
+
+COPY Frontend/ /app
+
+RUN npm install
+
+# 🔥 Vite build skips TS type checking by default
+RUN npm run build
+
+RUN npm install -g serve
+
+EXPOSE 3000
+
+# 🔁 Important: `--single` is needed for React Router
+CMD ["serve", "-s", "dist", "-l", "3000", "--single"]
