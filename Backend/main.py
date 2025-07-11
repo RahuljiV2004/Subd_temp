@@ -10,6 +10,7 @@ from flask_jwt_extended import (
     unset_jwt_cookies,
     verify_jwt_in_request
 )
+from ffuf import run_ffuf_scan,get_good_wordlists
 from utils.subfinder import run_subfinder_dnsx_httpx_stream
 from datetime import datetime, timedelta
 from zap import run_single_zap_scan
@@ -26,7 +27,7 @@ from dotenv import load_dotenv
 from utils.subfinder_runner import run_subfinder_and_enhance_streaming  # Updated import
 load_dotenv()
 from bson.son import SON
-
+from utils.subfinder_1 import run_subfinder_dnsx_httpx_stream1
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 from flask_mail import Mail, Message
@@ -55,6 +56,7 @@ client = MongoClient(mongo_uri)
 db = client['subdomain_scanner']
 collection = db['scan_results']
 collection_subfinder=db['scan_results_subfinder']
+collection_subfinder1=db['scan_results_subfinder1']
 tools_dir = "C:/Users/rahul/OneDrive/Desktop/Subd react/backend/tools"
 MXTOOLBOX_API_KEY = "abff5a1e-c212-4048-9095-6184c330bf5a"
 DNSDUMPSTER_API_KEY = "b9b1399a665b6fe4d62429fc43b4038435090c5f3659a74e747e831a9d902cf3"
@@ -595,6 +597,63 @@ def rescan_stream_subfinder_dnsx_httpx():
     return Response(generate(), mimetype="text/event-stream")
 
 
+
+@app.route("/rescan/stream_subfinder_dnsx_httpx1")
+def rescan_stream_subfinder_dnsx_httpx1():
+    # ✅ 1️⃣ Verify JWT from cookie
+    verify_jwt_in_request()
+    user_id = get_jwt_identity()
+    user = User.find_by_id(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # ✅ 2️⃣ Validate domain
+    domain = request.args.get("domain")
+    if not domain:
+        return jsonify({"error": "Missing domain parameter"}), 400
+
+    if not domain.endswith(user.organization):
+        return jsonify({
+            "error": f"You can only scan domains ending with {user.organization}"
+        }), 403
+
+    
+    def generate():
+        yield ": connected\n\n"  # SSE comment/ping
+
+        last_sent = time.time()
+
+        try:
+            scan = run_subfinder_dnsx_httpx_stream1(domain, collection_subfinder1)
+
+            while True:
+                try:
+                    message = next(scan)
+                    # ✅ Add data: exactly once here
+                    yield f"data: {message}\n\n"
+                    last_sent = time.time()
+
+                except StopIteration:
+                    yield 'data: {"type":"done","message":"Pipeline complete"}\n\n'
+                    break
+
+                except Exception as e:
+                    yield f'data: {{"type":"error","message":"Pipeline error: {str(e)}"}}\n\n'
+                    break
+
+                if time.time() - last_sent > 10:
+                    yield ": keep-alive\n\n"
+                    last_sent = time.time()
+
+                time.sleep(0.5)
+
+        except Exception as e:
+            yield f'data: {{"type":"error","message":"Could not start pipeline: {str(e)}"}}\n\n'
+
+
+    # ✅ 4️⃣ Return SSE response
+    return Response(generate(), mimetype="text/event-stream")
+
 @app.route('/api/getPorts', methods=['GET'])
 def get_ports():
     domain = request.args.get('subdomain')
@@ -772,6 +831,51 @@ def rescan_stream():
     # ✅ 4. Return properly as SSE response
     return Response(generate(), mimetype="text/event-stream")
 
+@app.route('/api/scan_ffuf', methods=['POST'])
+def scan_ffuf():
+    data = request.json
+    if not data or 'subdomain' not in data:
+        return jsonify({"error": "Missing 'subdomain' in request body."}), 400
+
+    subdomain = data['subdomain'].strip()
+    entry = collection_subfinder.find_one({"subdomain": subdomain})
+    if not entry:
+        return jsonify({"error": f"Subdomain '{subdomain}' not found in database."}), 404
+
+    wordlists = get_good_wordlists()
+    wordlist_dict = {name: path for path, name in wordlists}
+    default_wordlist_path = wordlists[0][0] if wordlists else None
+
+    wordlist_name = data.get('wordlist')
+    wordlist_path = wordlist_dict.get(wordlist_name) if wordlist_name else default_wordlist_path
+
+    if not wordlist_path:
+        return jsonify({"error": "No valid wordlist found or selected."}), 400
+
+    result = run_ffuf_scan(subdomain, wordlist_path)
+
+    if not result['success']:
+        return jsonify(result), 500
+
+    collection_subfinder.update_one(
+        {"_id": entry["_id"]},
+        {"$set": {
+            "ffuf": {
+                "url": result["url"],
+                "wordlist": wordlist_name or wordlist_path.split("/")[-1],
+                "results": result["results"]
+            }
+        }}
+    )
+
+    return jsonify({
+        "subdomain": subdomain,
+        "ffuf": {
+            "url": result["url"],
+            "wordlist": wordlist_name or wordlist_path.split("/")[-1],
+            "results": result["results"]
+        }
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
