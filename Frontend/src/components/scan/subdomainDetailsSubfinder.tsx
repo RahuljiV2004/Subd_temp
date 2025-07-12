@@ -4,6 +4,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useRef } from 'react';
 import { RefreshCw } from "lucide-react";
+import FFUFResultSection from './DirectoryTree';
 import PDFDownloadButton from './PDFDownloadButton'
 import SubfinderPDFDownloadButton from './PDFDownloadSubfinder';
 import { 
@@ -75,6 +76,33 @@ export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetail
     );
   };
   const [loading, setLoading] = useState(false);
+  const [dirBruteLoading, setDirBruteLoading] = useState(false);
+  const [ffufResults, setFfufResults] = useState<string[]>([]);
+
+const handleDirBruteClick = async () => {
+  setDirBruteLoading(true);
+  try {
+    const response = await fetch("http://localhost:5000/api/scan_ffuf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        subdomain: subdomain.subdomain,
+        wordlist: "common.txt",
+      }),
+    });
+
+    const data = await response.json();
+    console.log("FFUF scan response:", data);
+    setFfufResults(data.ffuf?.results || []);
+  } catch (error) {
+    console.error("Directory Bruteforce Error:", error);
+  } finally {
+    setDirBruteLoading(false);
+  }
+};
+
   const handleClick = async () => {
     setLoading(true);
     try {
@@ -87,6 +115,7 @@ export default function SubdomainDetails({ subdomain, onClose }: SubdomainDetail
       });
 
       const data = await response.json();
+      setPorts(data.nmap.open_ports)
       console.log("Scan response:", data);
     } catch (error) {
       console.error("Error:", error);
@@ -140,6 +169,26 @@ const getStatusBadge = (status?: number | null) => {
       setPorts(subdomain.nmap.open_ports);
     }
   }, [subdomain]);
+  useEffect(() => {
+  if (!subdomain.ffuf?.results?.length) {
+    fetchFfufResults();
+  } else {
+    // If another subdomain card is opened, reset local state
+    setFfufResults(subdomain.ffuf.results);
+  }
+}, [subdomain]);
+
+
+const fetchFfufResults = async () => {
+  try {
+    const res = await fetch(`http://127.0.0.1:5000/api/getFfuf_subfinder?subdomain=${subdomain.subdomain}`);
+    const data = await res.json();
+    setFfufResults(data.ffuf?.results || []);
+  } catch (err) {
+    console.error("Error fetching FFUF results:", err);
+  }
+};
+
 
   const fetchPorts = async () => {
     try {
@@ -265,19 +314,45 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
         "Run Nmap"
       )}
     </button>
-
-    <button
-      onClick={refreshPorts}
-      disabled={refreshing}
-      className={`text-base px-4 py-1.5 rounded-full border text-indigo-400 transition flex items-center gap-2 shrink-0
-        ${refreshing
-          ? "bg-indigo-500/30 border-indigo-500/50 cursor-not-allowed"
-          : "bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20"
-        }`}
-    >
-      <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-      {refreshing ? "Refreshing..." : "Refresh Ports"}
-    </button>
+      {/* Directory Bruteforce Button */}
+  <button
+    onClick={handleDirBruteClick}
+    disabled={dirBruteLoading}
+    className={`text-base px-4 py-1.5 rounded-full border text-green-500 transition shrink-0
+      ${dirBruteLoading 
+        ? "bg-green-500/30 border-green-500/50 cursor-not-allowed" 
+        : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20"
+      }`}
+  >
+    {dirBruteLoading ? (
+      <span className="flex items-center gap-2">
+        <svg
+          className="animate-spin h-4 w-4 text-green-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+        Scanning...
+      </span>
+    ) : (
+      "Directory Bruteforce"
+    )}
+  </button>
+    
 
     <SubfinderPDFDownloadButton subdomain={subdomain} />
   </div>
@@ -743,6 +818,47 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
 
   </div>
 </div>
+
+{/* <div className="modal-section">
+  <br />
+  <h3 className="modal-section-title text-green-500 text-xl font-bold">
+    &gt;&gt; Directory Bruteforce Results (FFUF)
+  </h3>
+
+  <div className="modal-section-content">
+    <div className="modal-grid-item md:col-span-2">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">
+        FFUF Matches
+      </div>
+      <div className="modal-grid-value text-primary flex flex-wrap gap-2">
+        {Array.isArray(ffufResults) && ffufResults.length > 0 ? (
+          ffufResults.map((line, idx) => (
+            <span
+              key={idx}
+              className={`px-3 py-1 rounded-full text-xs border
+                ${
+                  line.includes("200")
+                    ? "bg-green-500/20 text-green-200 border-green-500/30"
+                    : line.includes("301")
+                    ? "bg-yellow-500/20 text-yellow-200 border-yellow-500/30"
+                    : "bg-gray-500/20 text-gray-200 border-gray-500/30"
+                }`}
+            >
+              {line}
+            </span>
+          ))
+        ) : (
+          <span className="text-gray-400 text-sm">N/A</span>
+        )}
+      </div>
+    </div>
+  </div>
+</div> */}
+<FFUFResultSection
+  ffufResults={ffufResults}
+  baseUrl={`https://${subdomain.subdomain}`}
+/>
+
 <div className="modal-section">
   <br />
   <h3 className="modal-section-title text-green-500 text-xl font-bold">

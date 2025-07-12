@@ -167,6 +167,7 @@ const handleScan = async (domain: string, tool: string) => {
 
     eventSource.onerror = (err) => {
       if (err && err.status === 403) {
+      
         Swal.fire({
           icon: 'error',
           title: 'Access Forbidden',
@@ -175,7 +176,8 @@ const handleScan = async (domain: string, tool: string) => {
           color: '#fff',
           confirmButtonText: 'Got it!',
           confirmButtonColor: 'green',
-          customClass: { confirmButton: 'custom-confirm-button' }
+          customClass: { confirmButton: 'custom-confirm-button' },
+           popup: 'z-[10000]' // <-- Add high z-index
         });
       }
       console.error("❌ SSE stream error:", err);

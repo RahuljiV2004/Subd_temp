@@ -672,6 +672,24 @@ def get_ports():
 
     return jsonify({"open_ports": open_ports}), 200
 
+@app.route('/api/getFfuf_subfinder', methods=['GET'])
+def get_ffuf():
+    domain = request.args.get('subdomain')
+
+    if not domain:
+        return jsonify({"error": "Missing 'subdomain' parameter"}), 400
+
+    # Find document with this domain
+    doc = collection.find_one({"domain": domain})
+
+    if not doc:
+        return jsonify({"error": "No record found for this domain"}), 404
+
+    # ✅ Extract ffuf results
+    ffuf_results = doc.get("ffuf", {}).get("results", [])
+
+    return jsonify({"ffuf": {"results": ffuf_results}}), 200
+
 
 @app.route('/api/getPorts_subfinder', methods=['GET'])
 def get_ports_subfinder():
