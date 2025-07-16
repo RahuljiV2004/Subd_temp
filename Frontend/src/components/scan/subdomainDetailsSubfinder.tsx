@@ -963,7 +963,40 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
     </div>
   </div>
 </div>
+{/* === Future Commands Section === */}
+<div className="modal-section">
+  <h3 className="modal-section-title text-blue-400 text-xl font-bold mt-6">
+    &gt;&gt; What to Run Next
+  </h3>
+  <div className="modal-section-content">
+    <div className="bg-black text-blue-300 font-mono text-sm p-4 rounded-xl space-y-3">
+      <div className="flex items-start gap-2">
+        <span className="text-blue-500">*</span>
+        <div>
+          Suggested Commands:
+          <ul className="flex flex-col gap-2 mt-2">
+  {subdomain.next_commands?.length > 0 ? (
+    subdomain.next_commands.map((cmd, i) => (
+      <li key={i}>
+        <button
+          onClick={() => navigator.clipboard.writeText(cmd)}
+          className="w-full text-left bg-gray-900 border border-gray-700 hover:border-green-400 hover:bg-gray-800 text-green-300 font-mono text-xs px-4 py-2 rounded-md transition duration-150 ease-in-out"
+          title="Click to copy"
+        >
+          {cmd}
+        </button>
+      </li>
+    ))
+  ) : (
+    <li className="text-gray-500">No command suggestions available.</li>
+  )}
+</ul>
 
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 </div>
 
