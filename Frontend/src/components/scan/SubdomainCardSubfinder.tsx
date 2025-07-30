@@ -105,7 +105,7 @@ export function SubdomainCardSubfinder({ subdomain, onSelect }: SubdomainCardPro
                     </span>
                     {subdomain.dnsx_a.length > 1 && (
                       <span className="px-3 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                        +{subdomain.dnsx_a.length - 1} more
+                        +{subdomain.dnsx_a.length - 1} ip
                       </span>
                     )}
                   </>

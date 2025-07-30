@@ -471,9 +471,10 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
          
 <div className="modal-section">
   <h3 className="modal-section-title text-green-500 text-xl font-bold">
-    &gt;&gt; Tech Stack (WhatWeb)
+    &gt;&gt; Cert Info and Tech Stack
   </h3>
-  <div className="modal-section-content">
+  
+  {/* <div className="modal-section-content">
     <div className="bg-black p-4 rounded-md text-gray-200 font-mono text-sm space-y-2 border border-gray-700 shadow-lg">
       {(() => {
         // Build cleaned entries only if they have values
@@ -519,7 +520,160 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
         );
       })()}
     </div>
+  </div> */}
+  <div className="modal-section-content">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    {/* Host */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Host</div>
+      <div className="modal-grid-value text-primary">{subdomain.httpx.httpx_tls_host || 'N/A'}</div>
+    </div>
+
+    {/* Page Title */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Page Title</div>
+      <div className="modal-grid-value text-primary">{subdomain.httpx.httpx_title || 'N/A'}</div>
+    </div>
+
+    {/* Port */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Port</div>
+      <div className="modal-grid-value text-primary">{subdomain.httpx.httpx_tls_port || 'N/A'}</div>
+    </div>
+
+    {/* Web Server */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Web Server</div>
+      <div className="modal-grid-value text-primary">{subdomain.httpx.httpx_webserver || 'N/A'}</div>
+    </div>
+
+    {/* Technologies */}
+    <div className="modal-grid-item md:col-span-2">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Technologies</div>
+      <div className="modal-grid-value text-primary flex flex-wrap gap-2">
+        {Array.isArray(subdomain.httpx.httpx_tech) && subdomain.httpx.httpx_tech.length > 0 ? (
+          subdomain.httpx.httpx_tech.map((tech, idx) => (
+            <span
+              key={idx}
+              className="px-3 py-1 bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 rounded-full text-xs"
+            >
+              {tech}
+            </span>
+          ))
+        ) : (
+          <span className="text-gray-400 text-sm">N/A</span>
+        )}
+      </div>
+    </div>
+
+    {/* Wildcard Certificate */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Wildcard Certificate</div>
+      <div className="modal-grid-value text-primary">
+        {String(subdomain.httpx.httpx_tls_wildcard_certificate) === 'true' ? 'Yes' : 'No'}
+      </div>
+    </div>
+
+    {/* Subject CN */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Subject CN</div>
+      <div className="modal-grid-value text-primary">{subdomain.httpx.httpx_tls_subject_cn || 'N/A'}</div>
+    </div>
+
+    {/* Subject Alt Names */}
+    <div className="modal-grid-item md:col-span-2">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Subject Alt Names</div>
+      <div className="modal-grid-value text-primary flex flex-wrap gap-2">
+        {Array.isArray(subdomain.httpx.httpx_tls_subject_an) && subdomain.httpx.httpx_tls_subject_an.length > 0 ? (
+          subdomain.httpx.httpx_tls_subject_an.map((an, idx) => (
+            <span
+              key={idx}
+              className="px-3 py-1 bg-blue-500/20 text-blue-200 border border-blue-500/30 rounded-full text-xs"
+            >
+              {an}
+            </span>
+          ))
+        ) : (
+          <span className="text-gray-400 text-sm">N/A</span>
+        )}
+      </div>
+    </div>
+
+    {/* Issuer CN */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Issuer CN</div>
+      <div className="modal-grid-value text-primary">{subdomain.httpx.httpx_tls_issuer_cn || 'N/A'}</div>
+    </div>
+
+    {/* Issuer Org */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Issuer Org</div>
+      <div className="modal-grid-value text-primary flex flex-wrap gap-2">
+        {Array.isArray(subdomain.httpx.httpx_tls_issuer_org) && subdomain.httpx.httpx_tls_issuer_org.length > 0 ? (
+          subdomain.httpx.httpx_tls_issuer_org.map((org, idx) => (
+            <span
+              key={idx}
+              className="px-3 py-1 bg-blue-500/20 text-blue-200 border border-blue-500/30 rounded-full text-xs"
+            >
+              {org}
+            </span>
+          ))
+        ) : (
+          <span className="text-gray-400 text-sm">N/A</span>
+        )}
+      </div>
+    </div>
+
+    {/* Validity Period */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Valid From</div>
+      <div className="modal-grid-value text-primary">
+        {subdomain.httpx.httpx_tls_not_before || 'N/A'}
+      </div>
+    </div>
+
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Valid To</div>
+      <div className="modal-grid-value text-primary">
+        {subdomain.httpx.httpx_tls_not_after || 'N/A'}
+      </div>
+    </div>
+
+    {/* TLS Version */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">TLS Version</div>
+      <div className="modal-grid-value text-primary">
+        {subdomain.httpx.httpx_tls_tls_version || 'N/A'}
+      </div>
+    </div>
+
+    {/* Cipher */}
+    <div className="modal-grid-item">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Cipher</div>
+      <div className="modal-grid-value text-primary">
+        {subdomain.httpx.httpx_tls_cipher || 'N/A'}
+      </div>
+    </div>
+
+    {/* Fingerprint Hashes */}
+    <div className="modal-grid-item md:col-span-2">
+      <div className="modal-grid-label text-[#BF40BF] text-lg font-mono">Fingerprint Hashes</div>
+      <div className="modal-grid-value text-primary flex flex-col gap-1">
+        {subdomain.httpx.httpx_tls_fingerprint_hash ? (
+          <>
+            <div><span className="font-bold">MD5:</span> {subdomain.httpx.httpx_tls_fingerprint_hash.md5 || 'N/A'}</div>
+            <div><span className="font-bold">SHA1:</span> {subdomain.httpx.httpx_tls_fingerprint_hash.sha1 || 'N/A'}</div>
+            <div><span className="font-bold">SHA256:</span> {subdomain.httpx.httpx_tls_fingerprint_hash.sha256 || 'N/A'}</div>
+          </>
+        ) : (
+          <span className="text-gray-400 text-sm">N/A</span>
+        )}
+      </div>
+    </div>
+
   </div>
+</div>
 </div>
 
 

@@ -991,11 +991,49 @@ const [expandedAlerts, setExpandedAlerts] = useState({});
     <li className="text-gray-500">No command suggestions available.</li>
   )}
 </ul>
+{subdomain.explanation && (
+  <div className="mt-3 p-3 bg-gray-900 border border-gray-700 rounded-md text-sm text-gray-300">
+    <span className="font-semibold text-green-400">Why these commands?</span>
+    <p className="mt-1">{subdomain.explanation}</p>
+  </div>
+)}
 
         </div>
       </div>
     </div>
   </div>
+  <div className="modal-section">
+  <h3 className="modal-section-title text-blue-400 text-xl font-bold mt-6">
+    &gt;&gt; Executed Commands
+  </h3>
+  <div className="modal-section-content">
+    <div className="bg-black text-blue-300 font-mono text-sm p-4 rounded-xl space-y-6 max-h-[400px] overflow-y-auto">
+
+      {subdomain.executed_commands?.length > 0 ? (
+        subdomain.executed_commands.map((cmdObj, i) => (
+          <div key={i} className="border border-gray-700 rounded-md p-3 bg-gray-900 space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-green-400 font-bold"> &gt;&gt;</span>
+              <code className="text-green-300">{cmdObj.command}</code>
+              <button
+                onClick={() => navigator.clipboard.writeText(cmdObj.output)}
+                className="ml-auto text-xs text-blue-400 hover:underline"
+              >
+                Copy
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap text-gray-300 text-xs bg-black p-2 rounded-lg overflow-x-auto">
+              {cmdObj.output}
+            </pre>
+          </div>
+        ))
+      ) : (
+        <div className="text-gray-500">No executed commands yet.</div>
+      )}
+    </div>
+  </div>
+</div>
+
 </div>
 
 </div>

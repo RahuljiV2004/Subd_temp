@@ -166,7 +166,7 @@ export const colorPalettes = {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [colorPalette, setColorPalette] = useState<ColorPalette>(() => {
     const savedPalette = localStorage.getItem('colorPalette');
-    return (savedPalette as ColorPalette) || 'black';
+    return (savedPalette as ColorPalette) || 'purple';
   });
 
   useEffect(() => {
