@@ -1,29 +1,26 @@
 
-# import cohere
 # import os
 # import json
+# import time
 # import re
 # import requests
-# import time
-# import json
+# from openai import OpenAI
 
-# # === Set your Cohere API key ===
-# API_KEY = "fH3TKMrNFPm9hPIaJImizREeUBYqSzzGcwDO9g5h"
-
-# co = cohere.Client(API_KEY)
-
+# # === Set your OpenAI API key ===
+# api_key = "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"  # Replace securely
+# # api_key = "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"
+# client = OpenAI(api_key=api_key)
 
 
+# # === Fetch CVEs from NVD ===
 # def get_cve_info(tech_stack):
 #     if not tech_stack:
 #         return []
 
 #     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-    
 #     final_results = []
-#     total_limit = 10  # Max total CVEs
+#     total_limit = 10
 
-#     # === Clean function: replace colon with space but keep version ===
 #     def clean_tech(tech):
 #         return tech.replace(":", " ").strip()
 
@@ -31,14 +28,14 @@
 #         cleaned_tech = clean_tech(tech)
 
 #         try:
-#             time.sleep(1.6)  # NVD rate limit
+#             time.sleep(1.6)  # Respect NVD rate limit
 #             params = {
 #                 "keywordSearch": cleaned_tech,
 #                 "resultsPerPage": 3
 #             }
 
-#             response = requests.get(base_url,params=params)
-#             print("Fetched")
+#             response = requests.get(base_url, params=params)
+#             print("Fetched:", cleaned_tech)
 #             if response.status_code == 200:
 #                 data = response.json()
 #                 for vuln in data.get("vulnerabilities", []):
@@ -48,7 +45,6 @@
 #                     cve_id = vuln["cve"]["id"]
 #                     desc = vuln["cve"]["descriptions"][0]["value"]
 
-#                     # Get severity from CVSS (v3.1 preferred)
 #                     severity = "Unknown"
 #                     metrics = vuln["cve"].get("metrics", {})
 #                     if "cvssMetricV31" in metrics:
@@ -71,82 +67,104 @@
 
 #     return final_results
 
+
+# # === Risk Score + Recommendations ===
 # def get_risk_score_and_suggestions(subdomain_data):
 #     prompt = f"""
-# You are a cybersecurity expert. Based on the following subdomain scan data in JSON format, do three things:
+# You are a cybersecurity expert evaluating a subdomain based on scan data. Analyze the provided JSON input and perform the following tasks:
 
-# 1. Give a risk score from 0 (no risk) to 10 (critical).
-# 2. Explain briefly why this risk score was given.
-# 3. List three actionable security recommendations.
+# 1. Assign a **risk score from 0 to 10**:
+#    - 0 = No risk
+#    - 10 = Critical risk (e.g., RCEs, exposed admin panels, misconfigured services)
 
-# Respond ONLY in this JSON format:
+# 2. Provide a **clear justification**. Mention key risks such as:
+#    - Vulnerable technologies (e.g., Apache 2.4.49, WordPress 5.7.1)
+#    - Open ports (e.g., 21, 22, 80, 443, 445)
+#    - Exposed services (e.g., FTP, SMB, MySQL, MongoDB, WordPress)
+
+# 3. Suggest **three actionable security recommendations**, such as:
+#    - Patch outdated software
+#    - Restrict SSH or SMB to trusted IPs
+#    - Enable security headers
+
+# 4. Recommend **three specific security tests** to perform next:
+#    - If WordPress is detected: suggest `wpscan`
+#    - If SMB (port 445) is open: suggest `enum4linux` or `smbclient`
+#    - If port 3306 is open: suggest MySQL `nmap` script or audit config
+#    - If SSL issues: suggest `sslyze` or `testssl.sh`
+#    - If Apache exposed: suggest `nikto` or `OWASP ZAP`
+
+# Respond ONLY in valid JSON format:
 # {{
 #   "risk_score": <int>,
 #   "reason": "<brief reason>",
-#   "suggestions": ["<tip1>", "<tip2>", "<tip3>"]
+#   "suggestions": ["<tip1>", "<tip2>", "<tip3>"],
+#   "tests": ["<test1>", "<test2>", "<test3>"]
 # }}
 
-# Subdomain data:
+# Scan data:
 # {subdomain_data}
 # """
 
 #     try:
-#         response = co.generate(
-#             model="command-r-plus",
-#             prompt=prompt,
-#             max_tokens=300,
+#         response = client.chat.completions.create(
+#             model="gpt-4o",
+#             messages=[{"role": "user", "content": prompt}],
 #             temperature=0.3,
-#             stop_sequences=["```", "\n\n"],
+#             max_tokens=500
 #         )
 
-#         text_output = response.generations[0].text.strip()
+#         raw = response.choices[0].message.content.strip()
+#         # print("🔎 Raw LLM Response:\n", raw)
 
-#         # Try to parse JSON from the response
-#         return json.loads(text_output)
+#         # Extract valid JSON inside code blocks if present
+#         match = re.search(r"\{[\s\S]*\}", raw)
+#         if match:
+#             return json.loads(match.group())
+#         else:
+#             raise ValueError("No valid JSON found.")
 
 #     except Exception as e:
 #         print("⚠️ Error:", e)
-#         print("🔎 Raw response:", response.generations[0].text if 'response' in locals() else '')
 #         return {
 #             "risk_score": -1,
-#             "reason": "Failed to get a response from LLM",
-#             "suggestions": []
+#             "reason": "Failed to get a response",
+#             "suggestions": [],
+#             "tests": []
 #         }
 
+
+# # === Scan Comparison ===
 # def generate_scan_comparison_report(previous_scan, latest_scan, subdomain):
 #     prompt = f"""
-# Compare the following two scans on the subdomain '{subdomain}' and identify:
-# - Key differences in subdomains found and vulnerabilities
-# - Positive improvements and new risks
+# Compare the following two scans for the subdomain '{subdomain}'. Highlight:
+# - Key differences in subdomains and vulnerabilities
+# - Improvements and new risks
 # - Suggestions to mitigate new risks
 
 # Previous Scan:
-# - Scan ID: {previous_scan.get("scan_id")}
-# - Time: {previous_scan.get("scanned_at")}
-# - Subdomains Found: {previous_scan.get("subdomain")}
-# - Vulnerabilities: {previous_scan.get("vulnerabilities", [])}
+# {json.dumps(previous_scan, indent=2)}
 
 # Latest Scan:
-# - Scan ID: {latest_scan.get("scan_id")}
-# - Time: {latest_scan.get("scanned_at")}
-# - Subdomains Found: {latest_scan.get("subdomain")}
-# - Vulnerabilities: {latest_scan.get("vulnerabilities", [])}
+# {json.dumps(latest_scan, indent=2)}
 # """
 
 #     try:
-#         response = co.generate(
-#             model="command-r-plus",
-#             prompt=prompt,
-#             temperature=0.7,
-#             max_tokens=700,
+#         response = client.chat.completions.create(
+#             model="gpt-4o",
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.6,
+#             max_tokens=700
 #         )
-#         return response.generations[0].text.strip()
+#         return response.choices[0].message.content.strip()
 #     except Exception as e:
-#         raise RuntimeError(f"Cohere LLM call failed: {e}")
-# # === MAIN ===
-# if __name__ == "__main__":
-#     tech_stack = ["Apache 2.4.49", "PHP 7.4.3", "WordPress 5.7.1"]
+#         raise RuntimeError(f"OpenAI GPT-4o call failed: {e}")
 
+
+# # === MAIN TEST ===
+# if __name__ == "__main__":
+#     # Sample tech stack
+#     tech_stack = ["Apache 2.4.49", "PHP 7.4.3", "WordPress 5.7.1"]
 #     cves = get_cve_info(tech_stack)
 
 #     if not cves:
@@ -155,17 +173,94 @@
 #         print("\n✅ Suggested CVEs and Impacts:\n")
 #         for item in cves:
 #             print(f"- {item['cve']} ({item['severity']}): {item['desc']}")
+
+#     # Simulated scan input
+#     sample_scan_data = {
+#         "subdomain": "dev.example.com",
+#         "open_ports": [22, 80, 445],
+#         "technologies": ["Apache 2.4.49", "WordPress 5.7.1"],
+#         "vulnerabilities": ["CVE-2021-41773"]
+#     }
+
+#     print("\n🔍 Getting risk score...\n")
+#     result = get_risk_score_and_suggestions(json.dumps(sample_scan_data, indent=2))
+#     print(json.dumps(result, indent=2))
+
+# def get_next_commands(scan_data):
+#     import json
+
+#     prompt = f"""
+# You are an expert in offensive security automation.
+
+# Based on the following scan results, suggest the next 1 to 3 specific CLI commands a penetration tester should run **strictly using only** the following tools:
+
+# - nikto
+# - testssl.sh
+# - nmap (without using .nse scripts that require manual installation)
+# - curl
+# - dig
+# - sqlmap
+# - wpscan
+
+# Do **not** suggest tools outside this list. Prioritize built-in functionality. The commands must work as-is on most Linux systems or Kali setups without needing extra setup.
+
+# Output format (no JSON, no markdown):
+
+# <command 1>
+# <command 2>
+# <command 3>
+
+# <short explanation paragraph on why these commands are chosen>
+
+# Scan data:
+# {json.dumps(scan_data, indent=2)}
+# """
+
+#     try:
+#         response = client.chat.completions.create(
+#             model="gpt-4o",
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.2,
+#             max_tokens=600
+#         )
+
+#         raw = response.choices[0].message.content.strip()
+
+#         # Split lines
+#         lines = raw.splitlines()
+#         commands = []
+#         explanation_lines = []
+
+#         for line in lines:
+#             if line.strip() == "":
+#                 break
+#             commands.append(line.strip())
+
+#         explanation_start = len(commands) + 1  # Skip blank line
+#         explanation = "\n".join(lines[explanation_start:]).strip()
+
+#         return {
+#             "commands": commands,
+#             "explanation": explanation
+#         }
+
+#     except Exception as e:
+#         print("⚠️ Error parsing commands and explanation:", e)
+#         return {
+#             "commands": [],
+#             "explanation": "No explanation available due to error."
+#         }
+
 import os
 import json
 import time
 import re
 import requests
-from openai import OpenAI
+import cohere
 
-# === Set your OpenAI API key ===
-api_key = ""  # Replace securely
-client = OpenAI(api_key=api_key)
-
+# === Set your Cohere API key ===
+cohere_api_key = "GgdfgWRirixPfpsp3LonPtGtkafhsCcFPWkp2jwl"  # Replace with your actual API key
+client = cohere.Client(cohere_api_key)
 
 # === Fetch CVEs from NVD ===
 def get_cve_info(tech_stack):
@@ -222,7 +317,6 @@ def get_cve_info(tech_stack):
 
     return final_results
 
-
 # === Risk Score + Recommendations ===
 def get_risk_score_and_suggestions(subdomain_data):
     prompt = f"""
@@ -242,19 +336,14 @@ You are a cybersecurity expert evaluating a subdomain based on scan data. Analyz
    - Restrict SSH or SMB to trusted IPs
    - Enable security headers
 
-4. Recommend **three specific security tests** to perform next:
-   - If WordPress is detected: suggest `wpscan`
-   - If SMB (port 445) is open: suggest `enum4linux` or `smbclient`
-   - If port 3306 is open: suggest MySQL `nmap` script or audit config
-   - If SSL issues: suggest `sslyze` or `testssl.sh`
-   - If Apache exposed: suggest `nikto` or `OWASP ZAP`
+
 
 Respond ONLY in valid JSON format:
 {{
   "risk_score": <int>,
   "reason": "<brief reason>",
   "suggestions": ["<tip1>", "<tip2>", "<tip3>"],
-  "tests": ["<test1>", "<test2>", "<test3>"]
+  
 }}
 
 Scan data:
@@ -262,23 +351,19 @@ Scan data:
 """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
+        response = client.generate(
+            model="command-r-plus",
+            prompt=prompt,
             temperature=0.3,
             max_tokens=500
         )
 
-        raw = response.choices[0].message.content.strip()
-        print("🔎 Raw LLM Response:\n", raw)
-
-        # Extract valid JSON inside code blocks if present
+        raw = response.generations[0].text.strip()
         match = re.search(r"\{[\s\S]*\}", raw)
         if match:
             return json.loads(match.group())
         else:
             raise ValueError("No valid JSON found.")
-
     except Exception as e:
         print("⚠️ Error:", e)
         return {
@@ -287,7 +372,6 @@ Scan data:
             "suggestions": [],
             "tests": []
         }
-
 
 # === Scan Comparison ===
 def generate_scan_comparison_report(previous_scan, latest_scan, subdomain):
@@ -305,20 +389,18 @@ Latest Scan:
 """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
+        response = client.generate(
+            model="command-r-plus",
+            prompt=prompt,
             temperature=0.6,
             max_tokens=700
         )
-        return response.choices[0].message.content.strip()
+        return response.generations[0].text.strip()
     except Exception as e:
-        raise RuntimeError(f"OpenAI GPT-4o call failed: {e}")
-
+        raise RuntimeError(f"Cohere call failed: {e}")
 
 # === MAIN TEST ===
 if __name__ == "__main__":
-    # Sample tech stack
     tech_stack = ["Apache 2.4.49", "PHP 7.4.3", "WordPress 5.7.1"]
     cves = get_cve_info(tech_stack)
 
@@ -329,7 +411,6 @@ if __name__ == "__main__":
         for item in cves:
             print(f"- {item['cve']} ({item['severity']}): {item['desc']}")
 
-    # Simulated scan input
     sample_scan_data = {
         "subdomain": "dev.example.com",
         "open_ports": [22, 80, 445],
@@ -340,3 +421,78 @@ if __name__ == "__main__":
     print("\n🔍 Getting risk score...\n")
     result = get_risk_score_and_suggestions(json.dumps(sample_scan_data, indent=2))
     print(json.dumps(result, indent=2))
+
+# === Get Next Commands ===
+def get_next_commands(scan_data):
+    prompt = f"""
+You are an expert in offensive security automation.
+
+You are given scan results with detected technologies, versions, ports, and services.
+
+**Your task:**
+Suggest the next 1 to 3 specific CLI commands a penetration tester should run, chosen **strictly from this toolset**:
+
+- nikto
+- testssl.sh
+- nmap (avoid .nse scripts requiring manual install)
+- curl
+- dig
+- sqlmap
+- wpscan=`wpscan --url <target> --enumerate vp`
+
+**Rules:**
+- Use only the tools above.  
+- Commands must be fully runnable on Linux/Kali without extra installation.  
+- For each command, **explicitly reference the finding and the tool that detected it** (e.g., “Nmap found port 3306 open → indicates MySQL service → use sqlmap to test for SQLi”).  
+- Justify why each command is relevant to investigate or exploit that finding.  
+- Do not suggest unrelated tools or generic scans.  
+
+**Output format (no JSON, no markdown):**
+
+<command 1>  
+<command 2>  
+<command 3>  
+
+<explanation paragraph that explicitly states:>  
+- Which finding triggered each command  
+- Which tool reported it  
+- Why this command is the next logical step to investigate or exploit
+
+
+Scan data:
+{json.dumps(scan_data, indent=2)}
+"""
+
+
+    try:
+        response = client.generate(
+            model="command-r-plus",
+            prompt=prompt,
+            temperature=0.2,
+            max_tokens=600
+        )
+
+        raw = response.generations[0].text.strip()
+        lines = raw.splitlines()
+        commands = []
+        explanation_lines = []
+
+        for line in lines:
+            if line.strip() == "":
+                break
+            commands.append(line.strip())
+        print(commands)
+        explanation_start = len(commands) + 1
+        explanation = "\n".join(lines[explanation_start:]).strip()
+        print(explanation)
+        return {
+            "commands": commands,
+            "explanation": explanation
+        }
+
+    except Exception as e:
+        print("⚠️ Error parsing commands and explanation:", e)
+        return {
+            "commands": [],
+            "explanation": "No explanation available due to error."
+        }
