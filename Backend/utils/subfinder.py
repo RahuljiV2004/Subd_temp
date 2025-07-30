@@ -4,8 +4,9 @@ import os
 import json
 import datetime
 import uuid
+from .tool_executor import run_command
 import pytz  # ✅ For timezone support in Python 3.8
-from llm.cohere_cve_lookup import get_cve_info,get_risk_score_and_suggestions
+from llm.cohere_cve_lookup import get_cve_info,get_risk_score_and_suggestions,get_next_commands
 # Constant for IST
 IST = pytz.timezone("Asia/Kolkata")
 
@@ -140,9 +141,53 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
                 row["risk_score"] = risk_summary.get("risk_score")
                 row["risk_reason"] = risk_summary.get("reason")
                 row["risk_suggestions"] = risk_summary.get("suggestions")
+                row["risk_tests"] = risk_summary.get("tests")
                 yield log(f"🔐 [{i}/{len(subdomains)}] Cohere risk score: {row['risk_score']} — {row['risk_reason']}")
             except Exception as e:
                 yield log(f"⚠️ Risk scoring failed for {sub}: {str(e)}", "warn")
+            # 🧠 GPT command recommendations
+            try:
+                next_steps = get_next_commands(row)
+                row["next_commands"] = next_steps.get("commands", [])
+                row["explanation"] = next_steps.get("explanation", "No explanation provided.")
+                yield log(f"🧠 [{i}/{len(subdomains)}] GPT suggested {len(row['next_commands'])} next-step commands.")
+                    # ✅ Now run each command using run_command
+               
+                import io
+                import contextlib
+
+                executed_outputs = []
+
+                for cmd in row["next_commands"]:
+                    try:
+                        buf = io.StringIO()
+                        with contextlib.redirect_stdout(buf):  # capture the output from print
+                            run_command(cmd)
+
+                        output = buf.getvalue().strip()
+                        executed_outputs.append({
+                            "command": cmd,
+                            "output": output,
+                            "error": "",
+                            "return_code": 0
+                        })
+
+                        yield log(f"⚙️ Ran: `{cmd}`\n📤 Output: {output[:200]}{'...' if len(output) > 200 else ''}")
+                    except Exception as ex:
+                        executed_outputs.append({
+                            "command": cmd,
+                            "output": "",
+                            "error": str(ex),
+                            "return_code": -1
+                        })
+                        yield log(f"❌ Error executing `{cmd}`: {str(ex)}", "error")
+
+                row["executed_commands"] = executed_outputs
+
+
+            except Exception as e:
+                yield log(f"⚠️ GPT command suggestion failed for {sub}: {str(e)}", "warn")
+
 
             collection.insert_one(row)
             row_to_send = dict(row)
