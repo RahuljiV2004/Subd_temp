@@ -68,6 +68,7 @@ def index():
 
 from bson.son import SON
 
+
 @app.route("/resultssubfinder")
 @jwt_required()
 def resultssubfinder():
@@ -680,7 +681,7 @@ def get_ffuf():
         return jsonify({"error": "Missing 'subdomain' parameter"}), 400
 
     # Find document with this domain
-    doc = collection.find_one({"domain": domain})
+    doc = collection_subfinder.find_one({"subdomain": domain})
 
     if not doc:
         return jsonify({"error": "No record found for this domain"}), 404
@@ -876,7 +877,7 @@ def scan_ffuf():
         return jsonify(result), 500
 
     collection_subfinder.update_one(
-        {"_id": entry["_id"]},
+        {"_id": ObjectId(entry["_id"])},
         {"$set": {
             "ffuf": {
                 "url": result["url"],
@@ -895,5 +896,7 @@ def scan_ffuf():
         }
     })
 
+# if __name__ == "__main__":
+#     app.run(debug=True)
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
