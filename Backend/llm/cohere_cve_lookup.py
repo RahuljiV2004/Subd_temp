@@ -6,7 +6,6 @@
 # import requests
 # from openai import OpenAI
 
-# client = OpenAI(api_key=api_key)
 
 
 # # === Fetch CVEs from NVD ===
