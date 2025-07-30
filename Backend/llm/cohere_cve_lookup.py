@@ -6,9 +6,6 @@
 # import requests
 # from openai import OpenAI
 
-# # === Set your OpenAI API key ===
-# api_key = "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"  # Replace securely
-# # api_key = "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"
 # client = OpenAI(api_key=api_key)
 
 
@@ -259,7 +256,7 @@ import requests
 import cohere
 
 # === Set your Cohere API key ===
-cohere_api_key = "GgdfgWRirixPfpsp3LonPtGtkafhsCcFPWkp2jwl"  # Replace with your actual API key
+cohere_api_key = ""  # Replace with your actual API key
 client = cohere.Client(cohere_api_key)
 
 # === Fetch CVEs from NVD ===
