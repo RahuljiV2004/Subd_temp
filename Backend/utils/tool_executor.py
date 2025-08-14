@@ -5,9 +5,7 @@ from .automated_tools.wpscan import run_wpscan_custom
 from .automated_tools.nikto import run_nikto_scan
 from .automated_tools.curl import run_curl_scan
 from .automated_tools.dig import run_dig_custom
-# --------------------
-# TOOL-SPECIFIC FUNCTIONS
-# --------------------
+
 def run_nmap(command):
     print("🔍 Running Nmap scan...")
     result = run_nmap_custom(command)
@@ -45,9 +43,6 @@ def run_testssl(command):
     domain = command.strip().split()[-1]  # Extract domain
     run_testssl_scan(domain)  # Call imported custom function
 
-# --------------------
-# TOOL EXECUTOR
-# --------------------
 def run_command(command):
     tool = command.strip().split()[0]
 

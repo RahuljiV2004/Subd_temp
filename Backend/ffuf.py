@@ -4,7 +4,7 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TOOLS_DIR = os.path.join(BASE_DIR, "tools")
-FFUF_PATH = os.path.join(TOOLS_DIR, "ffuf.exe")
+FFUF_PATH = os.path.join(TOOLS_DIR, "ffuf")
 
 def get_good_wordlists():
     good_lists = [

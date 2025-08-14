@@ -1,17 +1,26 @@
-FROM node:20
-
+# Stage 1: Build Vite app
+FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY Frontend/ /app
+# Install deps first (caching)
+COPY Frontend/package*.json ./
+RUN npm install --frozen-lockfile
 
-RUN npm install
-
-# 🔥 Vite build skips TS type checking by default
+# Copy source code
+COPY Frontend/ ./
 RUN npm run build
 
-RUN npm install -g serve
+# Stage 2: Serve with nginx
+FROM nginx:alpine
 
-EXPOSE 3000
+# Optional: clear default nginx files
+RUN rm -rf /usr/share/nginx/html/*
 
-# 🔁 Important: `--single` is needed for React Router
-CMD ["serve", "-s", "dist", "-l", "3000", "--single"]
+# Copy build output
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Optional: custom nginx config for SPA
+# COPY Frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

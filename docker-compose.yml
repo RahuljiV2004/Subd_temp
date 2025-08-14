@@ -1,40 +1,60 @@
-version: "3.8"
-
+version: "3.9"
 services:
+  mongo:
+    image: mongo:6
+    container_name: mongo-container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: flask-backend
+    container_name: backend-container
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend:/app
-    restart: unless-stopped
     depends_on:
       - mongo
+      - zap
     environment:
-      - MONGO_URI=mongodb://mongo:27017/
+      - MONGO_URI=mongodb://mongo:27017/mydatabase
+      - ZAP_ADDRESS=zap
+      - ZAP_PORT=8085
+      - ZAP_API_KEY=vmkqcd8hdro5fc0cct2jv7vvr0
 
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    container_name: react-frontend
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
     ports:
-      - "3000:3000"
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: pass
     depends_on:
-      - backend
-    restart: unless-stopped
+      - mongo
 
-  mongo:
-    image: mongo:latest
-    container_name: mongo-db
+
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap-container
     ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    restart: unless-stopped
+      - "8085:8085"  # ZAP API port
+      - "8090:8090"  # Optional Web UI
+    environment:
+      - DISPLAY=:0
+    command: >
+      zap.sh -daemon -host 0.0.0.0 -port 8085
+      -config api.disablekey=false
+      -config api.key=vmkqcd8hdro5fc0cct2jv7vvr0
+      -config api.addrs.addr.name=.* 
+      -config api.addrs.addr.regex=true
+
+
 
 volumes:
-  mongo-data:
+  mongo_data:

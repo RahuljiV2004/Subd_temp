@@ -13,14 +13,14 @@ collection = db["scan_results_subfinder"]
 
 @app.task(name="periodic_subdomain_scan")
 def periodic_subdomain_scan():
-    domain = "iitm.ac.in"
+    domain = "ssn.edu.in"
     return run_scan_once(domain, collection)
 
 
 app.conf.beat_schedule = {
     'run-auto-scan-daily-at-3-30pm': {
         'task': 'periodic_subdomain_scan',
-        'schedule': crontab(minute=40, hour=15),  
+        'schedule': crontab(minute=17, hour=1),  
     }
 }
 

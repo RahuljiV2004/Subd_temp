@@ -36,7 +36,7 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            shell=True
+            shell=False
         )
 
         if proc.returncode != 0:
@@ -65,7 +65,7 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                shell=True
+                shell=False
             )
 
             if dnsx_proc.returncode == 0 and dnsx_proc.stdout.strip():
@@ -90,7 +90,7 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=False,
-                shell=True
+                shell=False
             )
 
             if httpx_proc.returncode == 0 and httpx_proc.stdout.strip():
@@ -114,7 +114,7 @@ def run_subfinder_dnsx_httpx_stream(domain, collection):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         text=True,
-                        shell=True
+                        shell=False
                     )
 
                     if nuclei_proc.returncode == 0 and nuclei_proc.stdout.strip():

@@ -51,7 +51,8 @@ jwt = JWTManager(app)
 
 # MongoDB connection
 # client = MongoClient("MONGO_URI",'mongodb://localhost:27017/')
-mongo_uri =  "mongodb://localhost:27017/"
+# mongo_uri =  "mongodb://localhost:27017/"
+mongo_uri="mongodb://mongo:27017/mydatabase"
 client = MongoClient(mongo_uri)
 db = client['subdomain_scanner']
 collection = db['scan_results']
